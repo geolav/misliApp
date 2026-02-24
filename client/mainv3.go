@@ -117,7 +117,8 @@ func main() {
 	defer conn.Close()
 	userClient := pb.NewUserServiceClient(conn)
 
-	tgBot, err := bot.New("8533358993:AAG2rHQtgo0rIpRoyabh7Z5P97n355Yxp1Y")
+	//tgBot, err := bot.New("8533358993:AAG2rHQtgo0rIpRoyabh7Z5P97n355Yxp1Y")
+	tgBot, err := bot.New("8606863856:AAFrvXCOlRhVxGGKGfQqFn3LenzZ1u6ls3I")
 	if err != nil {
 		log.Fatalf("failed to connect to bot: %v", err)
 	}

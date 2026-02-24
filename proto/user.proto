@@ -1,0 +1,229 @@
+syntax = "proto3";
+
+package user.v1;
+
+option go_package = "./proto/user/v1;userv1";
+
+service UserService {
+    rpc CreateUser (CreateUserRequest) returns (UserResponse);
+    rpc GetUserByUsername (GetUserRequest) returns (UserResponse);
+    rpc UpdateUser (UpdateUserRequest) returns (UserResponse);
+    rpc ListUsers (ListUsersRequest) returns (ListUserResponse);
+    rpc IsAdmin (IsAdminRequest) returns (IsAdminResponse);
+    rpc AddAdmin (AddAdminRequest) returns (AddAdminResponse);
+    rpc RemoveAdmin (RemoveAdminRequest) returns (RemoveAdminResponse);
+
+    // Регистрация/получение профиля по tg_id
+    rpc GetUserByTgID (GetUserByTgIDRequest) returns (UserResponse);
+    rpc RegisterUser (RegisterUserRequest) returns (UserResponse);
+
+    // Посты
+    rpc CreatePost (CreatePostRequest) returns (PostResponse);
+    rpc GetPost (GetPostRequest) returns (PostWithCommentsResponse);
+    rpc GetUserPosts (GetUserPostsRequest) returns (PostsResponse);
+    rpc DeletePost (DeletePostRequest) returns (DeleteResponse);
+
+    // Комментарии
+    rpc AddComment (AddCommentRequest) returns (CommentResponse);
+    rpc GetComments (GetCommentsRequest) returns (CommentsResponse);
+
+    // Подписки
+    rpc Subscribe (SubscribeRequest) returns (SubscribeResponse);
+    rpc Unsubscribe (UnsubscribeRequest) returns (SubscribeResponse);
+    rpc GetFeed (GetFeedRequest) returns (PostsResponse);
+
+    rpc IsSubscribed (IsSubscribedRequest) returns (IsSubscribedResponse);
+}
+
+message CreateUserRequest {
+    string name = 1;
+    string email = 2;
+    int32 age = 3;
+    string username = 4;
+    string tg_id = 5;
+    string bio = 6;
+    string avatar_url = 7;
+}
+
+message IsSubscribedRequest {
+    string follower_id = 1;
+    string following_id = 2;
+}
+
+message IsSubscribedResponse {
+    bool is_subscribed = 1;
+}
+
+message ListUsersRequest {
+    int32 page = 1;
+    int32 page_size = 2;
+}
+
+message ListUserResponse {
+    repeated UserResponse user = 1;
+    int32 total_count = 2;
+}
+
+message IsAdminRequest {
+    string tgID = 1;
+}
+
+message IsAdminResponse {
+    bool is_admin = 1;
+}
+
+message AddAdminRequest {
+    string tgID = 1;
+    string added_by = 2;
+}
+
+message AddAdminResponse {
+    bool ok = 1;
+    string message = 2;
+}
+
+message RemoveAdminRequest {
+    string tgID = 1;
+}
+
+message RemoveAdminResponse {
+    bool ok = 1;
+    string message = 2;
+}
+
+message GetUserRequest {
+    string username = 1;
+}
+
+message GetUserByTgIDRequest {
+    string tg_id = 1;
+}
+
+message RegisterUserRequest {
+    string tg_id = 1;
+    string username = 2;
+    string name = 3;
+    int32 age = 4;
+    string bio = 5;
+    string avatar_url = 6;
+}
+
+message UpdateUserRequest {
+    string user_id = 1;
+    string name = 2;
+    int32 age = 3;
+    string tg_id = 4;
+    string bio = 5;
+    string avatar_url = 6;
+}
+
+message UserResponse {
+    string user_id = 1;
+    string email = 2;
+    string name = 3;
+    int32 age = 4;
+    string tg_id = 5;
+    string username = 6;
+    string created_at = 7;
+    string bio = 8;
+    string avatar_url = 9;
+    int32 posts_count = 10;
+    int32 followers_count = 11;
+    int32 following_count = 12;
+}
+
+message CreatePostRequest {
+    string tg_id = 1;
+    string content = 2;
+    string media_url = 3;
+}
+
+message GetPostRequest {
+    string post_id = 1;
+}
+
+message GetUserPostsRequest {
+    string tg_id = 1;
+    int32 page = 2;
+    int32 page_size = 3;
+}
+
+message DeletePostRequest {
+    string post_id = 1;
+    string user_id = 2;          // Для проверки прав
+}
+
+message PostResponse {
+    string post_id = 1;
+    string author_tg_id = 2;
+    string author_name = 3;
+    string author_username = 4;
+    string content = 5;
+    string media_url = 6;
+    string created_at = 7;
+    string updated_at = 8;
+    int32 comments_count = 9;
+}
+
+message PostsResponse {
+    repeated PostResponse posts = 1;
+    int32 total_count = 2;
+}
+
+message PostWithCommentsResponse {
+    PostResponse post = 1;
+    repeated CommentResponse comments = 2;
+}
+
+message AddCommentRequest {
+    string post_id = 1;
+    string tg_id = 2;
+    string content = 3;
+}
+
+message GetCommentsRequest {
+    string post_id = 1;
+    int32 page = 2;
+    int32 page_size = 3;
+}
+
+message CommentResponse {
+    string comment_id = 1;
+    string post_id = 2;
+    string author_tg_id = 3;
+    string author_name = 4;        // Имя автора
+    string author_username = 5;     // @username автора
+    string content = 6;
+    string created_at = 7;
+}
+
+message CommentsResponse {
+    repeated CommentResponse comments = 1;
+    int32 total_count = 2;
+}
+
+message SubscribeRequest {
+    string follower_id = 1;       // Кто подписывается
+    string following_id = 2;      // На кого подписывается
+}
+
+message UnsubscribeRequest {
+    string follower_id = 1;
+    string following_id = 2;
+}
+
+message SubscribeResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message GetFeedRequest {
+    string user_id = 1;
+    int32 page = 2;
+    int32 page_size = 3;
+}
+
+message DeleteResponse {
+    bool success = 1;
+    string message = 2;
+}

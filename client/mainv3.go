@@ -1328,9 +1328,20 @@ func handleUserInput(ctx context.Context, b *bot.Bot, update *models.Update, use
 		userData.m[chatID]["name"] = data
 		userData.Unlock()
 
+		telegramUsername := update.Message.From.Username
+		userData.Lock()
+		userData.m[chatID]["username"] = telegramUsername
+		userData.Unlock()
+
 		userStates.Lock()
-		userStates.m[chatID] = "reg_username"
+		userStates.m[chatID] = "reg_bio"
 		userStates.Unlock()
+
+		b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID:    chatID,
+			Text:      fmt.Sprintf("✅ Ваш username: @%s\n\n📝 Расскажите о себе (биография) или отправьте `-` чтобы пропустить:", telegramUsername),
+			ParseMode: "Markdown",
+		})
 
 		//b.SendMessage(ctx, &bot.SendMessageParams{
 		//	ChatID: chatID,

@@ -703,6 +703,7 @@ func (s *Server) RemoveAdmin(ctx context.Context, req *pb.RemoveAdminRequest) (*
 }
 
 func main() {
+	log.Println("🚀 Server starting...")
 	dbConn, err := database.NewDatabase("postgres://postgres:pass@localhost:5432/postgres?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)

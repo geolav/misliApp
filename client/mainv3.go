@@ -2455,7 +2455,7 @@ func showUserList(ctx context.Context, b *bot.Bot, chatID int64, userClient pb.U
 	text := fmt.Sprintf("📊 **Список пользователей (страница %d):**\n\n", page)
 	for i, user := range resp.User {
 		num := (int(page)-1)*5 + i + 1
-		text += fmt.Sprintf("%d. **%s** (@%s)\n    ID: `%s`",
+		text += fmt.Sprintf("%d. **%s** (@%s)\n    ID: `%s`\n",
 			num, user.Name, user.Username, user.UserId)
 	}
 

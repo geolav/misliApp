@@ -126,20 +126,24 @@ func main() {
 	tgBot.RegisterHandler(bot.HandlerTypeMessageText, "/start", bot.MatchTypeExact,
 		func(ctx context.Context, b *bot.Bot, update *models.Update) {
 			chatID := update.Message.Chat.ID
-			tgID := strconv.FormatInt(chatID, 10)
-			md := metadata.New(map[string]string{"tg_id": tgID})
-			ctxWithMeta := metadata.NewOutgoingContext(ctx, md)
-			_, err := userClient.GetUserByTgID(ctxWithMeta, &pb.GetUserByTgIDRequest{
-				TgId: tgID,
-			})
+			//tgID := strconv.FormatInt(chatID, 10)
+			//md := metadata.New(map[string]string{"tg_id": tgID})
+			//ctxWithMeta := metadata.NewOutgoingContext(ctx, md)
+			//_, err := userClient.GetUserByTgID(ctxWithMeta, &pb.GetUserByTgIDRequest{
+			//	TgId: tgID,
+			//})
 
-			text := "🚀 Добро пожаловать! Выберите действие:"
-			if err != nil {
-				text = "🚀 Добро пожаловать!\n\n" +
-					//hi +
-					"\n\n Для начала зарегистрируйтесь через кнопку '👤 Регистрация'\n\n" +
-					"А после этого найдите профиль `@efnms` и прочитайте пост-посвящение, "
-			}
+			//text := "🚀 Добро пожаловать! Выберите действие:"
+			text := "🚀 Добро пожаловать!\n\n" +
+				//hi +
+				"\n\n Для начала зарегистрируйтесь через кнопку '👤 Регистрация'\n\n" +
+				"А после этого найдите профиль `@efnms` и прочитайте пост-посвящение"
+			//if err != nil {
+			//	text = "🚀 Добро пожаловать!\n\n" +
+			//		//hi +
+			//		"\n\n Для начала зарегистрируйтесь через кнопку '👤 Регистрация'\n\n" +
+			//		"А после этого найдите профиль `@efnms` и прочитайте пост-посвящение"
+			//}
 			b.SendMessage(ctx, &bot.SendMessageParams{
 				ChatID:      chatID,
 				Text:        text,

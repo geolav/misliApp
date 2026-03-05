@@ -366,7 +366,9 @@
     // ========== ЗАГРУЗКА ДАННЫХ ==========
     async function loadFeed() {
         try {
-            state.feed = await apiCall('/feed') || [];
+            const data = await apiCall('/feed')
+            state.feed = data?.posts || [];
+            console.log('Feed loaded:', state.feed.length, 'posts');
             renderFeed();
         } catch (e) {
             console.error('Feed error:', e);

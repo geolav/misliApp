@@ -126,14 +126,6 @@ func main() {
 	tgBot.RegisterHandler(bot.HandlerTypeMessageText, "/start", bot.MatchTypeExact,
 		func(ctx context.Context, b *bot.Bot, update *models.Update) {
 			chatID := update.Message.Chat.ID
-			//tgID := strconv.FormatInt(chatID, 10)
-			//md := metadata.New(map[string]string{"tg_id": tgID})
-			//ctxWithMeta := metadata.NewOutgoingContext(ctx, md)
-			//_, err := userClient.GetUserByTgID(ctxWithMeta, &pb.GetUserByTgIDRequest{
-			//	TgId: tgID,
-			//})
-
-			//text := "🚀 Добро пожаловать! Выберите действие:"
 			text := "🚀 Добро пожаловать!\n\n" +
 				//hi +
 				"Для начала зарегистрируйтесь через кнопку '👤 Регистрация'\n\n" +
@@ -164,12 +156,10 @@ func main() {
 
 			if state != "" && (data == "👤 Регистрация" ||
 				data == "🔍 Найти пользователя" ||
-				data == "📋 Список пользователей" ||
 				data == "👤 Мой профиль" ||
 				data == "📝 Создать пост" ||
 				data == "📰 Мои посты" ||
-				data == "📊 Лента" ||
-				data == "➕ Подписаться") {
+				data == "📊 Лента") {
 
 				userStates.Lock()
 				delete(userStates.m, chatID)
@@ -197,8 +187,8 @@ func main() {
 					Text:   "Введите username для поиска:",
 				})
 
-			case "📋 Список пользователей":
-				showUserList(ctxWithMeta, b, chatID, userClient, 1)
+			//case "📋 Список пользователей":
+			//	showUserList(ctxWithMeta, b, chatID, userClient, 1)
 			case "/users_list":
 				showUserList(ctxWithMeta, b, chatID, userClient, 1)
 
@@ -220,15 +210,6 @@ func main() {
 			case "📊 Лента":
 				showFeed(ctxWithMeta, b, chatID, userClient, 1)
 
-			case "➕ Подписаться":
-				userStates.Lock()
-				userStates.m[chatID] = "awaiting_subscribe"
-				userStates.Unlock()
-				b.SendMessage(ctx, &bot.SendMessageParams{
-					ChatID: chatID,
-					Text:   "Введите username пользователя, на которого хотите подписаться:",
-				})
-
 			default:
 				// Проверяем, не является ли это командой для просмотра поста
 				if strings.HasPrefix(data, "/post_") {
@@ -244,7 +225,6 @@ func main() {
 			}
 
 		})
-	// TODO pagination
 
 	// Обработчик для inline кнопок пагинации
 	tgBot.RegisterHandler(bot.HandlerTypeCallbackQueryData, "", bot.MatchTypePrefix,
@@ -360,44 +340,6 @@ func main() {
 					ReplyMarkup: keyboard,
 				})
 
-			//case strings.HasPrefix(data, "user_posts_next_"):
-			//	log.Printf("CALL user pagination: %s", data)
-			//	// Формат: user_posts_next_982648151_2
-			//	// Убираем префикс "user_posts_next_", остается "982648151_2"
-			//	remaining := strings.TrimPrefix(data, "user_posts_next_")
-			//	parts := strings.Split(remaining, "_")
-			//	if len(parts) == 2 {
-			//		targetTgID := parts[0]
-			//		page, _ := strconv.Atoi(parts[1])
-			//		log.Printf("➡️ Next page for user %s: %d", targetTgID, page)
-			//		handleUserPostsPagination(ctxMeta, b, chatID, messageID, userClient, targetTgID, int32(page), callback.ID)
-			//	} else {
-			//		log.Printf("❌ Invalid format for user_posts_next_: %s", data)
-			//		b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
-			//			CallbackQueryID: callback.ID,
-			//			Text:            "❌ Ошибка формата данных",
-			//			ShowAlert:       true,
-			//		})
-			//	}
-
-			//case strings.HasPrefix(data, "user_posts_prev_"):
-			//	// Формат: user_posts_prev_982648151_1
-			//	remaining := strings.TrimPrefix(data, "user_posts_prev_")
-			//	parts := strings.Split(remaining, "_")
-			//	if len(parts) == 2 {
-			//		targetTgID := parts[0]
-			//		page, _ := strconv.Atoi(parts[1])
-			//		log.Printf("⬅️ Previous page for user %s: %d", targetTgID, page)
-			//		handleUserPostsPagination(ctxMeta, b, chatID, messageID, userClient, targetTgID, int32(page), callback.ID)
-			//	} else {
-			//		log.Printf("❌ Invalid format for user_posts_prev_: %s", data)
-			//		b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
-			//			CallbackQueryID: callback.ID,
-			//			Text:            "❌ Ошибка формата данных",
-			//			ShowAlert:       true,
-			//		})
-			//	}
-
 			case strings.HasPrefix(data, "feed_nav_prev_"):
 				// Формат: feed_nav_prev_2
 				newIndexStr := strings.TrimPrefix(data, "feed_nav_prev_")
@@ -505,7 +447,6 @@ func main() {
 			}
 		})
 
-	// В функции main, после других обработчиков, добавьте:
 	tgBot.RegisterHandler(bot.HandlerTypeMessageText, "/del_", bot.MatchTypePrefix,
 		func(ctx context.Context, b *bot.Bot, update *models.Update) {
 			chatID := update.Message.Chat.ID
@@ -960,34 +901,6 @@ func showFeed(ctx context.Context, b *bot.Bot, chatID int64, userClient pb.UserS
 		// Если не удалось получить ID, показываем без него
 		showSingleFeedPost(ctx, b, chatID, 0, userClient, 0)
 	}
-
-	//for i, post := range resp.Posts {
-	//	created := formatDate(post.CreatedAt)
-	//	text += fmt.Sprintf("%d. **@%s**: %s\n   📅 %s\n   ID: `%s`\n\n",
-	//		i+1, post.AuthorUsername, truncateText(post.Content, 100), created, post.PostId)
-	//}
-	//
-	//// Клавиатура для пагинации
-	//keyboard := &models.InlineKeyboardMarkup{
-	//	InlineKeyboard: [][]models.InlineKeyboardButton{{}},
-	//}
-	//
-	//if page > 1 {
-	//	keyboard.InlineKeyboard[0] = append(keyboard.InlineKeyboard[0],
-	//		models.InlineKeyboardButton{Text: "⬅️ Назад", CallbackData: fmt.Sprintf("feed_page_prev_%d", page-1)})
-	//}
-	//
-	//if len(resp.Posts) == 5 {
-	//	keyboard.InlineKeyboard[0] = append(keyboard.InlineKeyboard[0],
-	//		models.InlineKeyboardButton{Text: "➡️ Вперед", CallbackData: fmt.Sprintf("feed_page_next_%d", page+1)})
-	//}
-	//
-	//b.SendMessage(ctx, &bot.SendMessageParams{
-	//	ChatID:      chatID,
-	//	Text:        text,
-	//	ParseMode:   "Markdown",
-	//	ReplyMarkup: keyboard,
-	//})
 }
 
 func showSingleFeedPost(ctx context.Context, b *bot.Bot, chatID int64, messageID int, userClient pb.UserServiceClient, index int) {
@@ -1367,11 +1280,6 @@ func handleUserInput(ctx context.Context, b *bot.Bot, update *models.Update, use
 		//userStates.m[chatID] = "reg_age"
 		userStates.m[chatID] = "reg_bio"
 		userStates.Unlock()
-
-		//b.SendMessage(ctx, &bot.SendMessageParams{
-		//	ChatID: chatID,
-		//	Text:   "📝 Введите ваш возраст",
-		//})
 
 		b.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID:    chatID,
@@ -1765,96 +1673,6 @@ func handleUserInput(ctx context.Context, b *bot.Bot, update *models.Update, use
 	}
 }
 
-// Функция для показа постов пользователя по его tg_id (по аналогии с showMyPosts)
-//func showUserPosts(ctx context.Context, b *bot.Bot, chatID int64, userClient pb.UserServiceClient, targetTgID string, page int32) {
-//	log.Printf("📰 showUserPosts: targetTgID=%s, page=%d", targetTgID, page)
-//	pageKey := fmt.Sprintf("%d_%s", chatID, targetTgID)
-//	userPostsPages.Lock()
-//	userPostsPages.m[pageKey] = int(page)
-//	userPostsPages.Unlock()
-//	// Получаем информацию о пользователе для отображения
-//	userInfo, err := userClient.GetUserByTgID(ctx, &pb.GetUserByTgIDRequest{
-//		TgId: targetTgID,
-//	})
-//
-//	if err != nil {
-//		log.Printf("❌ Failed to get user info: %v", err)
-//		b.SendMessage(ctx, &bot.SendMessageParams{
-//			ChatID:      chatID,
-//			Text:        "❌ Пользователь не найден",
-//			ReplyMarkup: getMainKeyboard(),
-//		})
-//		return
-//	}
-//
-//	// Получаем посты пользователя
-//	resp, err := userClient.GetUserPosts(ctx, &pb.GetUserPostsRequest{
-//		TgId:     targetTgID,
-//		Page:     page,
-//		PageSize: 5,
-//	})
-//
-//	if err != nil {
-//		log.Printf("❌ GetUserPosts error: %v", err)
-//		b.SendMessage(ctx, &bot.SendMessageParams{
-//			ChatID:      chatID,
-//			Text:        "❌ Ошибка загрузки постов",
-//			ReplyMarkup: getMainKeyboard(),
-//		})
-//		return
-//	}
-//
-//	if len(resp.Posts) == 0 {
-//		b.SendMessage(ctx, &bot.SendMessageParams{
-//			ChatID:      chatID,
-//			Text:        fmt.Sprintf("📭 У пользователя @%s пока нет постов", userInfo.Username),
-//			ReplyMarkup: getMainKeyboard(),
-//		})
-//		return
-//	}
-//
-//	text := fmt.Sprintf("📰 **Посты пользователя @%s (страница %d):**\n\n", userInfo.Username, page)
-//
-//	for i, post := range resp.Posts {
-//		created := formatDate(post.CreatedAt)
-//		num := (int(page)-1)*5 + i + 1
-//		cleanContent := sanitizeUTF8(post.Content)
-//		short := truncateText(cleanContent, 50)
-//		text += fmt.Sprintf("%d. **%s**\n   💬 Комментариев: %d\n   📅 %s\n   ID: `%s`\n\n",
-//			num, short, post.CommentsCount, created, post.PostId)
-//	}
-//
-//	// Клавиатура для пагинации (по аналогии с showMyPosts)
-//	keyboard := &models.InlineKeyboardMarkup{
-//		InlineKeyboard: [][]models.InlineKeyboardButton{{}},
-//	}
-//
-//	if page > 1 {
-//		keyboard.InlineKeyboard[0] = append(keyboard.InlineKeyboard[0],
-//			models.InlineKeyboardButton{Text: "⬅️ Назад", CallbackData: fmt.Sprintf("user_posts_prev_%s_%d", targetTgID, page-1)})
-//	}
-//
-//	if len(resp.Posts) == 5 {
-//		keyboard.InlineKeyboard[0] = append(keyboard.InlineKeyboard[0],
-//			models.InlineKeyboardButton{Text: "➡️ Вперед", CallbackData: fmt.Sprintf("user_posts_next_%s_%d", targetTgID, page+1)})
-//	}
-//
-//	// Добавляем кнопку "Назад к поиску"
-//	keyboard.InlineKeyboard = append(
-//		keyboard.InlineKeyboard,
-//		[]models.InlineKeyboardButton{
-//			{Text: "🔙 Назад к поиску", CallbackData: "back_to_search"},
-//		},
-//	)
-//	text = sanitizeUTF8(text)
-//	b.SendMessage(ctx, &bot.SendMessageParams{
-//		ChatID:      chatID,
-//		Text:        text,
-//		ParseMode:   "Markdown",
-//		ReplyMarkup: keyboard,
-//	})
-//}
-
 func showUserPosts(ctx context.Context, b *bot.Bot, chatID int64, userClient pb.UserServiceClient, targetTgID string, page int32) {
 	log.Printf("📰 showUserPosts: targetTgID=%s, page=%d", targetTgID, page)
 
@@ -2002,110 +1820,6 @@ func sanitizeUTF8(s string) string {
 	}
 	return strings.ToValidUTF8(s, "")
 }
-
-// Функция для пагинации постов пользователя (аналог handlePostsPagination)
-//func handleUserPostsPagination(
-//	ctx context.Context,
-//	b *bot.Bot,
-//	chatID int64,
-//	messageID int,
-//	userClient pb.UserServiceClient,
-//	targetTgID string,
-//	page int32,
-//	callbackID string,
-//) {
-//
-//	log.Printf("📰 handleUserPostsPagination: targetTgID=%s page=%d msg=%d",
-//		targetTgID, page, messageID)
-//
-//	userInfo, err := userClient.GetUserByTgID(ctx, &pb.GetUserByTgIDRequest{
-//		TgId: targetTgID,
-//	})
-//	if err != nil {
-//		log.Println("ERR userInfo:", err)
-//		return
-//	}
-//
-//	resp, err := userClient.GetUserPosts(ctx, &pb.GetUserPostsRequest{
-//		TgId:     targetTgID,
-//		Page:     page,
-//		PageSize: 5,
-//	})
-//	if err != nil {
-//		log.Println("ERR posts:", err)
-//		return
-//	}
-//
-//	text := fmt.Sprintf("📰 **Посты пользователя @%s (страница %d):**\n\n",
-//		userInfo.Username, page)
-//
-//	for i, post := range resp.Posts {
-//		cleanContent := sanitizeUTF8(post.Content)
-//		short := truncateText(cleanContent, 50)
-//		num := (int(page)-1)*5 + i + 1
-//		text += fmt.Sprintf(
-//			"%d. **%s**\n   💬 %d\n   ID: `%s`\n\n",
-//			num,
-//			short,
-//			post.CommentsCount,
-//			post.PostId,
-//		)
-//	}
-//	keyboard := &models.InlineKeyboardMarkup{
-//		InlineKeyboard: [][]models.InlineKeyboardButton{{}},
-//	}
-//
-//	if page > 1 {
-//		keyboard.InlineKeyboard[0] = append(
-//			keyboard.InlineKeyboard[0],
-//			models.InlineKeyboardButton{
-//				Text: "⬅️ Назад",
-//				CallbackData: fmt.Sprintf(
-//					"user_posts_prev_%s_%d",
-//					targetTgID,
-//					page-1,
-//				),
-//			})
-//	}
-//
-//	if len(resp.Posts) == 5 {
-//		keyboard.InlineKeyboard[0] = append(
-//			keyboard.InlineKeyboard[0],
-//			models.InlineKeyboardButton{
-//				Text: "➡️ Вперед",
-//				CallbackData: fmt.Sprintf(
-//					"user_posts_next_%s_%d",
-//					targetTgID,
-//					page+1,
-//				),
-//			})
-//	}
-//
-//	keyboard.InlineKeyboard = append(
-//		keyboard.InlineKeyboard,
-//		[]models.InlineKeyboardButton{
-//			{Text: "🔙 Назад к поиску", CallbackData: "back_to_search"},
-//		},
-//	)
-//
-//	if !utf8.ValidString(text) {
-//		log.Println("TEXT NOT UTF8")
-//	}
-//
-//	text = sanitizeUTF8(text)
-//
-//	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-//		ChatID:      chatID,
-//		MessageID:   messageID,
-//		Text:        text,
-//		ParseMode:   "Markdown",
-//		ReplyMarkup: keyboard,
-//	})
-//
-//	if err != nil {
-//		log.Println("EDIT FAIL:", err)
-//	}
-//}
 
 func handleUsersPagination(ctx context.Context, b *bot.Bot, chatID int64, messageID int, userClient pb.UserServiceClient, data string) {
 	tgID := strconv.FormatInt(chatID, 10)

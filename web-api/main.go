@@ -66,6 +66,7 @@ func main() {
 	mux.HandleFunc("/api/post/create", s.handleCreatePost)
 	mux.HandleFunc("/api/post/delete", s.handleDeletePost)
 	mux.HandleFunc("/api/post/comment", s.handleAddComment)
+	mux.HandleFunc("/api/post/comments", s.handleGetComments)
 
 	log.Println("🌐 Mini App HTTP server starting on :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
@@ -88,6 +89,39 @@ func (s *Server) grpcContext(ctx context.Context, tgID string) context.Context {
 }
 
 // ================== API HANDLERS ==================
+
+// GET /api/post/comments?post_id=...
+func (s *Server) handleGetComments(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	tgID := getTgID(r)
+	postID := r.URL.Query().Get("post_id")
+
+	if tgID == "" || postID == "" {
+		http.Error(w, `{"success":false,"message":"missing tg_id or post_id"}`, http.StatusBadRequest)
+		return
+	}
+
+	ctx := s.grpcContext(r.Context(), tgID)
+
+	comments, err := s.grpcClient.GetComments(ctx, &pb.GetCommentsRequest{
+		PostId: postID,
+	})
+
+	if err != nil {
+		http.Error(w, `{"success":false,"message":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(ApiResponse{
+		Success: true,
+		Data:    comments,
+	})
+}
 
 // GET /api/feed?tg_id=123
 func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {

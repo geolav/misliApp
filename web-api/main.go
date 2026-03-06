@@ -114,6 +114,7 @@ func (s *Server) handleGetComments(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
+		log.Println("❌ GetComments error:", err)
 		http.Error(w, `{"success":false,"message":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}

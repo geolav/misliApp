@@ -997,10 +997,23 @@
 </dialog>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
+    // ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ (ВНЕ DOMContentLoaded) ==========
+    let state = {
+        currentUser: null,
+        feed: [],
+        searchResult: null,
+        searchResultPosts: []
+    };
+
+    let effectiveTgId = '';
+    let tg = null;
+
+    // ========== ИНИЦИАЛИЗАЦИЯ ==========
     document.addEventListener('DOMContentLoaded', function() {
-        // ========== ИНИЦИАЛИЗАЦИЯ TELEGRAM ==========
-        const tg = window.Telegram?.WebApp;
+        // Telegram
+        tg = window.Telegram?.WebApp;
         if (tg) {
             tg.ready();
             tg.expand();
@@ -1008,311 +1021,312 @@
             tg.setBackgroundColor("#fffaf3");
         }
 
-        // ========== СОСТОЯНИЕ ПРИЛОЖЕНИЯ ==========
-        const state = {
-            currentUser: null,
-            feed: [],
-            searchResult: null,
-            searchResultPosts: []
-        };
-
+        // Получаем tg_id
         const tgId = tg?.initDataUnsafe?.user?.id?.toString() || '';
         const urlTgId = new URLSearchParams(window.location.search).get('tg_id');
-        const effectiveTgId = tgId || urlTgId || '';
+        effectiveTgId = tgId || urlTgId || '';
 
-        // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
-        function formatDate(dateStr) {
-            try {
-                const d = new Date(dateStr);
-                if (isNaN(d.getTime())) return dateStr;
-                return d.toLocaleString('ru-RU', {
-                    day: '2-digit', month: '2-digit', year: 'numeric',
-                    hour: '2-digit', minute: '2-digit'
-                });
-            } catch {
-                return dateStr;
-            }
-        }
+        // Вешаем обработчики
+        setupEventListeners();
 
-        function updateUserPill() {
-            const el = document.getElementById("userPill");
-            if (el) {
-                el.textContent = state.currentUser ?
-                    `${state.currentUser.name} @${state.currentUser.username}` :
-                    "👤 гость";
-            }
-        }
+        // Загружаем данные
+        init();
+    });
 
-        function setScreen(target) {
-            document.querySelectorAll(".tab-btn").forEach(btn => {
-                btn.classList.toggle("active", btn.dataset.screen === target);
+    // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+    function formatDate(dateStr) {
+        try {
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            return d.toLocaleString('ru-RU', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
             });
-            document.querySelectorAll(".screen").forEach(screen => {
-                screen.classList.toggle("active", screen.id === target);
+        } catch {
+            return dateStr;
+        }
+    }
+
+    function updateUserPill() {
+        const el = document.getElementById("userPill");
+        if (el) {
+            el.textContent = state.currentUser ?
+                `${state.currentUser.name} @${state.currentUser.username}` :
+                "👤 гость";
+        }
+    }
+
+    function setScreen(target) {
+        document.querySelectorAll(".tab-btn").forEach(btn => {
+            btn.classList.toggle("active", btn.dataset.screen === target);
+        });
+        document.querySelectorAll(".screen").forEach(screen => {
+            screen.classList.toggle("active", screen.id === target);
+        });
+    }
+
+    // ========== API ВЫЗОВЫ ==========
+    async function apiCall(endpoint, method = 'GET', body = null) {
+        if (!effectiveTgId) throw new Error('No Telegram ID');
+
+        const url = `/api${endpoint}${endpoint.includes('?') ? '&' : '?'}tg_id=${encodeURIComponent(effectiveTgId)}`;
+        const options = {
+            method,
+            headers: { 'Content-Type': 'application/json' }
+        };
+        if (body) options.body = JSON.stringify(body);
+
+        const response = await fetch(url, options);
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message || 'API error');
+        return data.data;
+    }
+
+    // ========== ЗАГРУЗКА ДАННЫХ ==========
+    async function loadFeed() {
+        try {
+            const data = await apiCall('/feed');
+            state.feed = data?.posts || [];
+            console.log('Feed loaded:', state.feed.length, 'posts');
+            renderFeed();
+            renderProfile();
+        } catch (e) {
+            console.error('Feed error:', e);
+            state.feed = [];
+            renderFeed();
+        }
+    }
+
+    async function loadProfile() {
+        try {
+            state.currentUser = await apiCall('/profile');
+            updateUserPill();
+            document.getElementById("registrationGate")?.classList.add('hide');
+            renderProfile();
+        } catch (e) {
+            if (e.message.includes('not found')) {
+                document.getElementById("registrationGate")?.classList.remove('hide');
+                const tgUsername = tg?.initDataUnsafe?.user?.username || '';
+                const usernameInput = document.getElementById("regUsername");
+                if (usernameInput) usernameInput.value = tgUsername;
+            }
+            updateUserPill();
+        }
+    }
+
+    async function createPost(content, mediaUrl) {
+        try {
+            const newPost = await apiCall('/post/create', 'POST', {
+                content,
+                media_url: mediaUrl || ''
             });
-        }
 
-        // ========== API ВЫЗОВЫ ==========
-        async function apiCall(endpoint, method = 'GET', body = null) {
-            if (!effectiveTgId) throw new Error('No Telegram ID');
-
-            const url = `/api${endpoint}${endpoint.includes('?') ? '&' : '?'}tg_id=${encodeURIComponent(effectiveTgId)}`;
-            const options = {
-                method,
-                headers: { 'Content-Type': 'application/json' }
-            };
-            if (body) options.body = JSON.stringify(body);
-
-            const response = await fetch(url, options);
-            const data = await response.json();
-            if (!data.success) throw new Error(data.message || 'API error');
-            return data.data;
-        }
-
-        // ========== ЗАГРУЗКА ДАННЫХ ==========
-        async function loadFeed() {
-            try {
-                const data = await apiCall('/feed');
-                state.feed = data?.posts || [];
-                console.log('Feed loaded:', state.feed.length, 'posts');
+            if (newPost) {
+                state.feed = [newPost, ...state.feed];
                 renderFeed();
                 renderProfile();
-            } catch (e) {
-                console.error('Feed error:', e);
-                state.feed = [];
-                renderFeed();
             }
+
+            setScreen('feed');
+            if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        } catch (e) {
+            alert('❌ Ошибка: ' + e.message);
+        }
+    }
+
+    async function deletePost(postId) {
+        if (!confirm('🗑️ Точно удалить пост?')) return;
+        try {
+            await apiCall(`/post/delete?post_id=${postId}`, 'POST');
+            state.feed = state.feed.filter(p => p.post_id !== postId);
+            renderFeed();
+            renderProfile();
+            if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        } catch (e) {
+            alert('❌ Ошибка удаления: ' + e.message);
+        }
+    }
+
+    async function searchUser(username) {
+        try {
+            const user = await apiCall(`/user/search?username=${encodeURIComponent(username)}`);
+            state.searchResult = user;
+            renderSearchResult(user);
+            state.searchResultPosts = state.feed.filter(p => p.author_tg_id === user.tg_id);
+            renderSearchPosts();
+        } catch (e) {
+            alert('❌ Пользователь не найден');
+            state.searchResult = null;
+            state.searchResultPosts = [];
+            renderSearchResult(null);
+        }
+    }
+
+    async function addComment(postId, content) {
+        if (!content.trim()) return;
+        try {
+            await apiCall('/post/comment', 'POST', { post_id: postId, content });
+            const post = state.feed.find(p => p.post_id === postId);
+            if (post) {
+                post.comments_count = (post.comments_count || 0) + 1;
+                openPost(postId);
+            }
+            if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+        } catch (e) {
+            alert('❌ Ошибка комментария: ' + e.message);
+        }
+    }
+
+    // ========== РЕНДЕРИНГ ==========
+    function renderFeed() {
+        const root = document.getElementById("feedList");
+        if (!root) return;
+
+        if (!state.currentUser) {
+            root.innerHTML = `<div class="card">👋 Зарегистрируйся</div>`;
+            return;
         }
 
-        async function loadProfile() {
-            try {
-                state.currentUser = await apiCall('/profile');
-                updateUserPill();
-                document.getElementById("registrationGate")?.classList.add('hide');
-                renderProfile();
-            } catch (e) {
-                if (e.message.includes('not found')) {
-                    document.getElementById("registrationGate")?.classList.remove('hide');
-                    const tgUsername = tg?.initDataUnsafe?.user?.username || '';
-                    const usernameInput = document.getElementById("regUsername");
-                    if (usernameInput) usernameInput.value = tgUsername;
-                }
-                updateUserPill();
-            }
+        if (!state.feed.length) {
+            root.innerHTML = `<div class="card">📭 Лента пуста</div>`;
+            return;
         }
 
-        async function createPost(content, mediaUrl) {
-            try {
-                const newPost = await apiCall('/post/create', 'POST', {
-                    content,
-                    media_url: mediaUrl || ''
-                });
-
-                if (newPost) {
-                    state.feed = [newPost, ...state.feed];
-                    renderFeed();
-                    renderProfile();
-                }
-
-                setScreen('feed');
-                if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            } catch (e) {
-                alert('❌ Ошибка: ' + e.message);
-            }
-        }
-
-        async function deletePost(postId) {
-            if (!confirm('🗑️ Точно удалить пост?')) return;
-            try {
-                await apiCall(`/post/delete?post_id=${postId}`, 'POST');
-                state.feed = state.feed.filter(p => p.post_id !== postId);
-                renderFeed();
-                renderProfile();
-                if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            } catch (e) {
-                alert('❌ Ошибка удаления: ' + e.message);
-            }
-        }
-
-        async function searchUser(username) {
-            try {
-                const user = await apiCall(`/user/search?username=${encodeURIComponent(username)}`);
-                state.searchResult = user;
-                renderSearchResult(user);
-                state.searchResultPosts = state.feed.filter(p => p.author_tg_id === user.tg_id);
-                renderSearchPosts();
-            } catch (e) {
-                alert('❌ Пользователь не найден');
-                state.searchResult = null;
-                state.searchResultPosts = [];
-                renderSearchResult(null);
-            }
-        }
-
-        async function addComment(postId, content) {
-            if (!content.trim()) return;
-            try {
-                await apiCall('/post/comment', 'POST', { post_id: postId, content });
-                const post = state.feed.find(p => p.post_id === postId);
-                if (post) {
-                    post.comments_count = (post.comments_count || 0) + 1;
-                    openPost(postId);
-                }
-                if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
-            } catch (e) {
-                alert('❌ Ошибка комментария: ' + e.message);
-            }
-        }
-
-        // ========== РЕНДЕРИНГ ==========
-        function renderFeed() {
-            const root = document.getElementById("feedList");
-            if (!root) return;
-
-            if (!state.currentUser) {
-                root.innerHTML = `<div class="card">👋 Зарегистрируйся</div>`;
-                return;
-            }
-
-            if (!state.feed.length) {
-                root.innerHTML = `<div class="card">📭 Лента пуста</div>`;
-                return;
-            }
-
-            root.innerHTML = state.feed.map(post => `
-                <article class="card">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <b>@${post.author_username}</b>
-                        <span class="muted">${formatDate(post.created_at)}</span>
-                    </div>
-                    <p>${post.content}</p>
-                    ${post.media_url ? `<p><a href="${post.media_url}" target="_blank">🔗 медиа</a></p>` : ''}
-                    <div class="meta">
-                        <span>💬 ${post.comments_count || 0}</span>
-                    </div>
-                    <div class="actions">
-                        <button class="btn-alt" data-open="${post.post_id}">Открыть</button>
-                        ${post.author_tg_id === effectiveTgId ?
-                `<button class="btn-danger" data-delete="${post.post_id}">Удалить</button>` : ''}
-                    </div>
-                </article>
-            `).join("");
-        }
-
-        function renderProfile() {
-            const root = document.getElementById("profileRoot");
-            if (!root) return;
-
-            if (!state.currentUser) {
-                root.innerHTML = `<div class="card">👋 Зарегистрируйся</div>`;
-                return;
-            }
-
-            const user = state.currentUser;
-            const myPosts = state.feed.filter(p => p.author_tg_id === effectiveTgId);
-
-            root.innerHTML = `
-                <div class="grid two-col">
-                    <div class="card">
-                        <h3>${user.name}</h3>
-                        <p class="muted">@${user.username}</p>
-                        <p>${user.bio || '— био не указано —'}</p>
-                        <div class="stat-line">
-                            <div class="stat"><b>${myPosts.length}</b><small>постов</small></div>
-                            <div class="stat"><b>${user.followers_count || 0}</b><small>подписчиков</small></div>
-                            <div class="stat"><b>${user.following_count || 0}</b><small>подписок</small></div>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <h3>Мои посты</h3>
-                        <div class="grid">
-                            ${myPosts.length ? myPosts.map(post => `
-                                <div class="card">
-                                    <p>${post.content}</p>
-                                    <div class="meta">
-                                        <span>${formatDate(post.created_at)}</span>
-                                        <span>💬 ${post.comments_count || 0}</span>
-                                    </div>
-                                    <div class="actions">
-                                        <button class="btn-alt" data-open="${post.post_id}">Открыть</button>
-                                        <button class="btn-danger" data-delete="${post.post_id}">🗑️</button>
-                                    </div>
-                                </div>
-                            `).join('') : '<p class="muted">Пока нет постов</p>'}
-                        </div>
-                    </div>
+        root.innerHTML = state.feed.map(post => `
+            <article class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <b>@${post.author_username}</b>
+                    <span class="muted">${formatDate(post.created_at)}</span>
                 </div>
-            `;
+                <p>${post.content}</p>
+                ${post.media_url ? `<p><a href="${post.media_url}" target="_blank">🔗 медиа</a></p>` : ''}
+                <div class="meta">
+                    <span>💬 ${post.comments_count || 0}</span>
+                </div>
+                <div class="actions">
+                    <button class="btn-alt" data-open="${post.post_id}">Открыть</button>
+                    ${post.author_tg_id === effectiveTgId ?
+            `<button class="btn-danger" data-delete="${post.post_id}">Удалить</button>` : ''}
+                </div>
+            </article>
+        `).join("");
+    }
+
+    function renderProfile() {
+        const root = document.getElementById("profileRoot");
+        if (!root) return;
+
+        if (!state.currentUser) {
+            root.innerHTML = `<div class="card">👋 Зарегистрируйся</div>`;
+            return;
         }
 
-        function renderSearchResult(user) {
-            const resultDiv = document.getElementById("searchResult");
-            if (!resultDiv) return;
-            resultDiv.innerHTML = user ? `
+        const user = state.currentUser;
+        const myPosts = state.feed.filter(p => p.author_tg_id === effectiveTgId);
+
+        root.innerHTML = `
+            <div class="grid two-col">
                 <div class="card">
                     <h3>${user.name}</h3>
                     <p class="muted">@${user.username}</p>
-                    <p>${user.bio || '—'}</p>
-                </div>
-            ` : '<p class="muted">🔍 Пользователь не найден</p>';
-        }
-
-        function renderSearchPosts() {
-            const postsDiv = document.getElementById("searchPosts");
-            if (!postsDiv) return;
-            postsDiv.innerHTML = state.searchResultPosts.length ?
-                state.searchResultPosts.map(post => `
-                    <div class="card">
-                        <p>${post.content}</p>
-                        <div class="meta">
-                            <span>${formatDate(post.created_at)}</span>
-                            <span>💬 ${post.comments_count || 0}</span>
-                        </div>
-                        <button class="btn-alt" data-open="${post.post_id}">Открыть</button>
+                    <p>${user.bio || '— био не указано —'}</p>
+                    <div class="stat-line">
+                        <div class="stat"><b>${myPosts.length}</b><small>постов</small></div>
+                        <div class="stat"><b>${user.followers_count || 0}</b><small>подписчиков</small></div>
+                        <div class="stat"><b>${user.following_count || 0}</b><small>подписок</small></div>
                     </div>
-                `).join('') :
-                '<p class="muted">📭 Нет постов</p>';
-        }
-
-        function openPost(postId) {
-            const post = state.feed.find(p => p.post_id === postId);
-            if (!post) return;
-
-            const dialog = document.getElementById("postDialog");
-            const content = document.getElementById("dialogContent");
-            if (!dialog || !content) return;
-
-            content.innerHTML = `
-                <h3>📝 @${post.author_username}</h3>
-                <p>${post.content}</p>
-                ${post.media_url ? `<p><a href="${post.media_url}" target="_blank">🔗 медиа</a></p>` : ''}
-                <p class="muted">${formatDate(post.created_at)}</p>
-                <hr>
-                <h4>💬 Комментарии</h4>
-                <div class="grid" id="commentsList">
-                    <p class="muted">Функция загрузки комментариев в разработке</p>
                 </div>
-                <form id="commentForm">
-                    <input id="commentInput" placeholder="Комментарий..." required>
-                    <button class="btn-pri" type="submit">Отправить</button>
-                </form>
-            `;
+                <div class="card">
+                    <h3>Мои посты</h3>
+                    <div class="grid">
+                        ${myPosts.length ? myPosts.map(post => `
+                            <div class="card">
+                                <p>${post.content}</p>
+                                <div class="meta">
+                                    <span>${formatDate(post.created_at)}</span>
+                                    <span>💬 ${post.comments_count || 0}</span>
+                                </div>
+                                <div class="actions">
+                                    <button class="btn-alt" data-open="${post.post_id}">Открыть</button>
+                                    <button class="btn-danger" data-delete="${post.post_id}">🗑️</button>
+                                </div>
+                            </div>
+                        `).join('') : '<p class="muted">Пока нет постов</p>'}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
 
-            dialog.showModal();
-            const commentForm = document.getElementById("commentForm");
-            if (commentForm) {
-                commentForm.onsubmit = (e) => {
-                    e.preventDefault();
-                    const input = document.getElementById("commentInput");
-                    if (input) {
-                        addComment(postId, input.value);
-                        input.value = '';
-                    }
-                };
-            }
+    function renderSearchResult(user) {
+        const resultDiv = document.getElementById("searchResult");
+        if (!resultDiv) return;
+        resultDiv.innerHTML = user ? `
+            <div class="card">
+                <h3>${user.name}</h3>
+                <p class="muted">@${user.username}</p>
+                <p>${user.bio || '—'}</p>
+            </div>
+        ` : '<p class="muted">🔍 Пользователь не найден</p>';
+    }
+
+    function renderSearchPosts() {
+        const postsDiv = document.getElementById("searchPosts");
+        if (!postsDiv) return;
+        postsDiv.innerHTML = state.searchResultPosts.length ?
+            state.searchResultPosts.map(post => `
+                <div class="card">
+                    <p>${post.content}</p>
+                    <div class="meta">
+                        <span>${formatDate(post.created_at)}</span>
+                        <span>💬 ${post.comments_count || 0}</span>
+                    </div>
+                    <button class="btn-alt" data-open="${post.post_id}">Открыть</button>
+                </div>
+            `).join('') :
+            '<p class="muted">📭 Нет постов</p>';
+    }
+
+    function openPost(postId) {
+        const post = state.feed.find(p => p.post_id === postId);
+        if (!post) return;
+
+        const dialog = document.getElementById("postDialog");
+        const content = document.getElementById("dialogContent");
+        if (!dialog || !content) return;
+
+        content.innerHTML = `
+            <h3>📝 @${post.author_username}</h3>
+            <p>${post.content}</p>
+            ${post.media_url ? `<p><a href="${post.media_url}" target="_blank">🔗 медиа</a></p>` : ''}
+            <p class="muted">${formatDate(post.created_at)}</p>
+            <hr>
+            <h4>💬 Комментарии</h4>
+            <div class="grid" id="commentsList">
+                <p class="muted">Функция загрузки комментариев в разработке</p>
+            </div>
+            <form id="commentForm">
+                <input id="commentInput" placeholder="Комментарий..." required>
+                <button class="btn-pri" type="submit">Отправить</button>
+            </form>
+        `;
+
+        dialog.showModal();
+        const commentForm = document.getElementById("commentForm");
+        if (commentForm) {
+            commentForm.onsubmit = (e) => {
+                e.preventDefault();
+                const input = document.getElementById("commentInput");
+                if (input) {
+                    addComment(postId, input.value);
+                    input.value = '';
+                }
+            };
         }
+    }
 
-        // ========== ОБРАБОТЧИКИ ==========
+    // ========== НАСТРОЙКА ОБРАБОТЧИКОВ ==========
+    function setupEventListeners() {
         const tabs = document.getElementById("tabs");
         if (tabs) {
             tabs.addEventListener("click", (e) => {
@@ -1358,7 +1372,6 @@
                 }
 
                 try {
-                    // TODO: добавить endpoint для регистрации
                     alert('Регистрация пока не подключена к API');
                     await loadProfile();
                     await loadFeed();
@@ -1385,15 +1398,13 @@
                 if (!inDialog) e.currentTarget.close();
             });
         }
+    }
 
-        // ========== ИНИЦИАЛИЗАЦИЯ ==========
-        async function init() {
-            await loadProfile();
-            await loadFeed();
-        }
-
-        init();
-    });
+    // ========== ИНИЦИАЛИЗАЦИЯ ==========
+    async function init() {
+        await loadProfile();
+        await loadFeed();
+    }
 </script>
 </body>
 </html>

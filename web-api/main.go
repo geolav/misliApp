@@ -108,7 +108,9 @@ func (s *Server) handleGetComments(w http.ResponseWriter, r *http.Request) {
 	ctx := s.grpcContext(r.Context(), tgID)
 
 	comments, err := s.grpcClient.GetComments(ctx, &pb.GetCommentsRequest{
-		PostId: postID,
+		PostId:   postID,
+		Page:     1,
+		PageSize: 50,
 	})
 
 	if err != nil {

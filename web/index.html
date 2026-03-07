@@ -378,6 +378,11 @@
     async function loadFeed() {
         try {
             const data = await apiCall('/feed');
+            if (!state.currentUser && state.feed.length) {
+                state.currentUser = {
+                    tg_id: effectiveTgId
+                };
+            }
             state.feed = data?.posts || [];
             console.log('Feed loaded:', state.feed.length, 'posts');
             renderFeed();
@@ -724,11 +729,10 @@
 
     // ========== ИНИЦИАЛИЗАЦИЯ ==========
     async function init() {
-        // await Promise.all([
-        //     loadProfile(),
-        //     loadFeed()
-        // ]);
-        await loadFeed();
+        await Promise.all([
+            loadProfile(),
+            loadFeed()
+        ]);
     }
 </script>
 </body>

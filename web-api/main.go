@@ -77,7 +77,7 @@ func main() {
 // Вспомогательная функция для получения tg_id
 func getTgID(r *http.Request) string {
 	// 1. Из заголовка (Telegram Mini App)
-	if tgID := r.Header.Get("X-Telegram-User-Id"); tgID != "" {
+	if tgID := r.URL.Query().Get("tg_id"); tgID != "" {
 		return tgID
 	}
 	// 2. Из query-параметра (для тестирования в браузере)

@@ -107,10 +107,8 @@ func (s *Server) handleGetComments(w http.ResponseWriter, r *http.Request) {
 
 	ctx := s.grpcContext(r.Context(), tgID)
 
-	comments, err := s.grpcClient.GetComments(ctx, &pb.GetCommentsRequest{
-		PostId:   postID,
-		Page:     1,
-		PageSize: 50,
+	postWithComments, err := s.grpcClient.GetPost(ctx, &pb.GetPostRequest{
+		PostId: postID,
 	})
 
 	if err != nil {
@@ -122,7 +120,7 @@ func (s *Server) handleGetComments(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(ApiResponse{
 		Success: true,
-		Data:    comments,
+		Data:    postWithComments.Comments,
 	})
 }
 

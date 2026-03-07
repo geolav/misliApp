@@ -464,6 +464,8 @@
                 post.comments_count = (post.comments_count || 0) + 1;
                 openPost(postId);
             }
+            renderFeed();
+            renderProfile();
             if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
         } catch (e) {
             alert('❌ Ошибка комментария: ' + e.message);

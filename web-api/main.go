@@ -61,6 +61,8 @@ func main() {
 
 	// API endpoints
 	mux.HandleFunc("/api/feed", s.handleFeed)
+	mux.HandleFunc("/api/user/posts", s.handleUserPosts)
+	mux.HandleFunc("/api/post/get", s.handleGetPost)
 	mux.HandleFunc("/api/profile", s.handleProfile)
 	mux.HandleFunc("/api/user/search", s.handleUserSearch)
 	mux.HandleFunc("/api/post/create", s.handleCreatePost)
@@ -89,6 +91,46 @@ func (s *Server) grpcContext(ctx context.Context, tgID string) context.Context {
 }
 
 // ================== API HANDLERS ==================
+
+func (s *Server) handleGetPost(w http.ResponseWriter, r *http.Request) {
+
+	tgID := getTgID(r)
+	postID := r.URL.Query().Get("post_id")
+	ctx := s.grpcContext(r.Context(), tgID)
+	post, err := s.grpcClient.GetPost(ctx, &pb.GetPostRequest{
+		PostId: postID,
+	})
+
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	json.NewEncoder(w).Encode(ApiResponse{
+		Success: true,
+		Data:    post,
+	})
+}
+
+func (s *Server) handleUserPosts(w http.ResponseWriter, r *http.Request) {
+	tgID := r.URL.Query().Get("tg_id")
+	ctx := s.grpcContext(r.Context(), tgID)
+	posts, err := s.grpcClient.GetUserPosts(ctx, &pb.GetUserPostsRequest{
+		TgId:     tgID,
+		Page:     1,
+		PageSize: 20,
+	})
+
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	json.NewEncoder(w).Encode(ApiResponse{
+		Success: true,
+		Data:    posts,
+	})
+}
 
 // GET /api/post/comments?post_id=...
 func (s *Server) handleGetComments(w http.ResponseWriter, r *http.Request) {

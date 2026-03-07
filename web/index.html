@@ -444,7 +444,9 @@
             const user = await apiCall(`/user/search?username=${encodeURIComponent(username)}`);
             state.searchResult = user;
             renderSearchResult(user);
-            state.searchResultPosts = state.feed.filter(p => p.author_tg_id === user.tg_id);
+            // state.searchResultPosts = state.feed.filter(p => p.author_tg_id === user.tg_id);
+            const posts = await apiCall(`/user/posts?tg_id=${user.tg_id}`);
+            state.searchResultPosts = posts.posts || [];
             renderSearchPosts();
         } catch (e) {
             alert('❌ Пользователь не найден');
@@ -611,7 +613,9 @@
 
         dialog.showModal();
         try {
-            const comments = await loadComments(postId);
+            // const comments = await loadComments(postId);
+            const data = await apiCall(`/post/get?post_id=${postId}`);
+            const comments = data.comments || [];
             const list = document.getElementById("commentsList");
             if (comments.length) {
                 list.innerHTML = comments.map(c => `
@@ -719,15 +723,12 @@
     }
 
     // ========== ИНИЦИАЛИЗАЦИЯ ==========
-    // async function init() {
-    //     await loadProfile();
-    //     await loadFeed();
-    // }
     async function init() {
-        await Promise.all([
-            loadProfile(),
-            loadFeed()
-        ]);
+        // await Promise.all([
+        //     loadProfile(),
+        //     loadFeed()
+        // ]);
+        await loadFeed();
     }
 </script>
 </body>

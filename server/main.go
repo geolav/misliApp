@@ -60,7 +60,25 @@ func (s *Server) GetUserByUsername(ctx context.Context, req *pb.GetUserRequest) 
 		return nil, status.Error(codes.InvalidArgument, "user_id is empty")
 	}
 
+	md, ok := metadata.FromIncomingContext(ctx)
+	var viewerID string
+	if ok {
+		tgIDs := md.Get("tg_id")
+		if len(tgIDs) > 0 {
+			viewerTgID := tgIDs[0]
+
+			viewer, err := s.database.GetUserByTgID(viewerTgID)
+			if err == nil {
+				viewerID = viewer.ID
+			}
+		}
+	}
+
 	user, err := s.database.GetUserByUsername(req.Username)
+	var isSubscribed bool
+	if viewerID != "" {
+		isSubscribed, _ = s.database.IsSubscribed(viewerID, user.ID)
+	}
 
 	// Получаем дополнительную статистику (можно добавить методы в database)
 	postsCount, _ := s.database.GetUserPostsCount(user.ID)
@@ -81,6 +99,7 @@ func (s *Server) GetUserByUsername(ctx context.Context, req *pb.GetUserRequest) 
 		PostsCount:     postsCount,
 		FollowersCount: followersCount,
 		FollowingCount: followingCount,
+		IsSubscribed:   isSubscribed,
 	}, nil
 }
 

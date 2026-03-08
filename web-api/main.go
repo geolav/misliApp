@@ -242,10 +242,16 @@ func (s *Server) handleUserSearch(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"success":false,"message":"missing tg_id or username"}`, http.StatusBadRequest)
 		return
 	}
+	//user, err := s.grpcClient.GetUserByUsername(ctx, &pb.GetUserRequest{Username: username})
+	md := metadata.Pairs("tg_id", tgID)
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
 
-	ctx := s.grpcContext(r.Context(), tgID)
-
-	user, err := s.grpcClient.GetUserByUsername(ctx, &pb.GetUserRequest{Username: username})
+	user, err := s.grpcClient.GetUserByUsername(
+		ctx,
+		&pb.GetUserRequest{
+			Username: username,
+		},
+	)
 	if err != nil {
 		http.Error(w, `{"success":false,"message":"user not found"}`, http.StatusNotFound)
 		return

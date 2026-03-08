@@ -871,6 +871,7 @@ type UserResponse struct {
 	PostsCount     int32                  `protobuf:"varint,10,opt,name=posts_count,json=postsCount,proto3" json:"posts_count,omitempty"`
 	FollowersCount int32                  `protobuf:"varint,11,opt,name=followers_count,json=followersCount,proto3" json:"followers_count,omitempty"`
 	FollowingCount int32                  `protobuf:"varint,12,opt,name=following_count,json=followingCount,proto3" json:"following_count,omitempty"`
+	IsSubscribed   bool                   `protobuf:"varint,13,opt,name=is_subscribed,json=isSubscribed,proto3" json:"is_subscribed,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -987,6 +988,13 @@ func (x *UserResponse) GetFollowingCount() int32 {
 		return x.FollowingCount
 	}
 	return 0
+}
+
+func (x *UserResponse) GetIsSubscribed() bool {
+	if x != nil {
+		return x.IsSubscribed
+	}
+	return false
 }
 
 type CreatePostRequest struct {
@@ -2010,7 +2018,7 @@ const file_proto_user_proto_rawDesc = "" +
 	"\x05tg_id\x18\x04 \x01(\tR\x04tgId\x12\x10\n" +
 	"\x03bio\x18\x05 \x01(\tR\x03bio\x12\x1d\n" +
 	"\n" +
-	"avatar_url\x18\x06 \x01(\tR\tavatarUrl\"\xd7\x02\n" +
+	"avatar_url\x18\x06 \x01(\tR\tavatarUrl\"\xfc\x02\n" +
 	"\fUserResponse\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12\x12\n" +
@@ -2027,7 +2035,8 @@ const file_proto_user_proto_rawDesc = "" +
 	" \x01(\x05R\n" +
 	"postsCount\x12'\n" +
 	"\x0ffollowers_count\x18\v \x01(\x05R\x0efollowersCount\x12'\n" +
-	"\x0ffollowing_count\x18\f \x01(\x05R\x0efollowingCount\"_\n" +
+	"\x0ffollowing_count\x18\f \x01(\x05R\x0efollowingCount\x12#\n" +
+	"\ris_subscribed\x18\r \x01(\bR\fisSubscribed\"_\n" +
 	"\x11CreatePostRequest\x12\x13\n" +
 	"\x05tg_id\x18\x01 \x01(\tR\x04tgId\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x1b\n" +

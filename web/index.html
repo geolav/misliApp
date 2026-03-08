@@ -506,7 +506,7 @@
                     <span>💬 ${post.comments_count || 0}</span>
                 </div>
                 <div class="actions">
-                    <button class="btn-alt" data-open="${post.post_id}">Открыть</button>
+                    <button class="btn-alt" data-open="${post.post_id}">Комментарии</button>
                     ${post.author_tg_id === effectiveTgId ?
             `<button class="btn-danger" data-delete="${post.post_id}">Удалить</button>` : ''}
                 </div>
@@ -549,7 +549,7 @@
                                     <span>💬 ${post.comments_count || 0}</span>
                                 </div>
                                 <div class="actions">
-                                    <button class="btn-alt" data-open="${post.post_id}">Открыть</button>
+                                    <button class="btn-alt" data-open="${post.post_id}">Комментарии</button>
                                     <button class="btn-danger" data-delete="${post.post_id}">🗑️</button>
                                 </div>
                             </div>
@@ -563,13 +563,44 @@
     function renderSearchResult(user) {
         const resultDiv = document.getElementById("searchResult");
         if (!resultDiv) return;
-        resultDiv.innerHTML = user ? `
+        if (!user) {
+            resultDiv.innerHTML = '<p class="muted">🔍 Пользователь не найден</p>';
+        }
+        resultDiv.innerHTML = `
             <div class="card">
                 <h3>${user.name}</h3>
                 <p class="muted">@${user.username}</p>
                 <p>${user.bio || '—'}</p>
+                <div class="actions">
+                    <button id="followBtn" class="btn-alt"></button>
+                </div>
             </div>
-        ` : '<p class="muted">🔍 Пользователь не найден</p>';
+        `;
+        const btn = document.getElementById("followBtn");
+        if (user.is_subscribed) {
+            btn.textContent = "Отписаться";
+        } else {
+            btn.textContent = "Подписаться";
+        }
+        btn.onclick = async () => {
+            try {
+                if (user.is_subscribed) {
+                    await apiCall('/user/unsubscribe', 'POST', {
+                        user_id: user.user_id
+                    });
+                    btn.textContent = "Подписаться";
+                    user.is_subscribed = false;
+                } else {
+                    await apiCall('/user/subscribe', 'POST', {
+                        user_id: user.user_id
+                    });
+                    btn.textContent = "Отписаться";
+                    user.is_subscribed = true;
+                }
+            } catch (e) {
+                alert("Ошибка: " + e.message);
+            }
+        };
     }
 
     function renderSearchPosts() {
@@ -583,7 +614,7 @@
                         <span>${formatDate(post.created_at)}</span>
                         <span>💬 ${post.comments_count || 0}</span>
                     </div>
-                    <button class="btn-alt" data-open="${post.post_id}">Открыть</button>
+                    <button class="btn-alt" data-open="${post.post_id}">Комментарии</button>
                 </div>
             `).join('') :
             '<p class="muted">📭 Нет постов</p>';

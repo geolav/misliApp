@@ -501,6 +501,8 @@ func (s *Server) Subscribe(ctx context.Context, req *pb.SubscribeRequest) (*pb.S
 
 	err := s.database.Subscribe(req.FollowerId, req.FollowingId)
 	if err != nil {
+		log.Printf("❌ Subscribe DB error: follower=%s, following=%s, err=%v",
+			req.FollowerId, req.FollowingId, err) // ← вот этого не хватает!
 		if strings.Contains(err.Error(), "duplicate key") {
 			return &pb.SubscribeResponse{
 				Success: false,

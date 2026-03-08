@@ -59,6 +59,23 @@
             box-shadow: var(--shadow);
         }
 
+        .glass-button {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 10px 18px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            transition: all 0.2s ease;
+        }
+        .glass-button:hover {
+            background: rgba(255,255,255,0.25);
+            transform: translateY(-1px);
+        }
+
         .brand {
             font-family: "Sora", sans-serif;
             font-weight: 700;
@@ -614,7 +631,7 @@
                         <span>${formatDate(post.created_at)}</span>
                         <span>💬 ${post.comments_count || 0}</span>
                     </div>
-                    <button class="btn-alt" data-open="${post.post_id}">Комментарии</button>
+                    <button class="glass-button" data-open="${post.post_id}">Комментарии</button>
                 </div>
             `).join('') :
             '<p class="muted">📭 Нет постов</p>';

@@ -638,6 +638,9 @@
     }
 
     async function openPost(postId) {
+        const post = state.feed.find(p => p.post_id === postId);
+        if (!post) return;
+
         const dialog = document.getElementById("postDialog");
         const content = document.getElementById("dialogContent");
         if (!dialog || !content) return;
@@ -649,6 +652,9 @@
             <p class="muted">${formatDate(post.created_at)}</p>
             <hr>
             <h4>💬 Комментарии</h4>
+<!--            <div class="grid" id="commentsList">-->
+<!--                <p class="muted">Функция загрузки комментариев в разработке</p>-->
+<!--            </div>-->
             <div class="grid" id="commentsList">
                 <p class="muted">Загрузка...</p>
             </div>
@@ -662,42 +668,35 @@
         try {
             // const comments = await loadComments(postId);
             const data = await apiCall(`/post/get?post_id=${postId}`);
-            const post = data.post;
             const comments = data.comments || [];
-            content.innerHTML = `
-            <h3>📝 @${post.author_username}</h3>
-            <p>${formatText(post.content)}</p>
-            ${post.media_url ? `<p><a href="${post.media_url}" target="_blank">🔗 медиа</a></p>` : ''}
-            <p class="muted">${formatDate(post.created_at)}</p>
-            <hr>
-            <h4>💬 Комментарии</h4>
-            <div class="grid" id="commentsList">
-                ${comments.length ? comments.map(c => `
-                    <div class="card">
-                        <b>@${c.author_username}</b>
-                        <p>${formatText(c.content)}</p>
-                    </div>
-                `).join('') : '<p class="muted">Нет комментариев</p>'}
+            const list = document.getElementById("commentsList");
+            if (comments.length) {
+                list.innerHTML = comments.map(c => `
+            <div class="card">
+                <b>@${c.author_username}</b>
+                <p>${formatText(c.content)}</p>
             </div>
-            <form id="commentForm">
-                <input id="commentInput" placeholder="Комментарий..." required>
-                <button class="btn-pri" type="submit">Отправить</button>
-            </form>
-            `;
-            const commentForm = document.getElementById("commentForm");
-            if (commentForm) {
-                commentForm.onsubmit = (e) => {
-                    e.preventDefault();
-                    const input = document.getElementById("commentInput");
-                    if (input) {
-                        addComment(postId, input.value);
-                        input.value = '';
-                    }
-                };
+        `).join('');
+            } else {
+                list.innerHTML = `<p class="muted">Нет комментариев</p>`;
             }
+
         } catch(e) {
+
             document.getElementById("commentsList").innerHTML =
                 `<p class="muted">Ошибка загрузки комментариев</p>`;
+
+        }
+        const commentForm = document.getElementById("commentForm");
+        if (commentForm) {
+            commentForm.onsubmit = (e) => {
+                e.preventDefault();
+                const input = document.getElementById("commentInput");
+                if (input) {
+                    addComment(postId, input.value);
+                    input.value = '';
+                }
+            };
         }
     }
 

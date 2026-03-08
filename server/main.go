@@ -561,6 +561,8 @@ func (s *Server) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (*pb.Posts
 		} else {
 			log.Printf("⚠️ Failed to get comments for post %s: %v", post.ID, err)
 		}
+
+		log.Printf("Post %s comments count: %d", post.ID, commentsCount)
 		pbPosts = append(pbPosts, &pb.PostResponse{
 			PostId:         post.ID,
 			AuthorTgId:     author.TgID,

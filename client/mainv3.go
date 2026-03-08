@@ -1636,7 +1636,7 @@ func handleUserInput(ctx context.Context, b *bot.Bot, update *models.Update, use
 			})
 			return
 		}
-
+		log.Printf("DEBUG Subscribe: currUser.UserId=%s, currUser.TgId=%s", currUser.UserId, currUser.TgId)
 		subResp, err := userClient.Subscribe(ctxMeta, &pb.SubscribeRequest{
 			FollowerId:  currUser.UserId,
 			FollowingId: targetUser.UserId,

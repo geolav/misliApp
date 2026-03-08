@@ -554,6 +554,13 @@ func (s *Server) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (*pb.Posts
 			log.Printf("Warning: author not found for post %s: %v", post.ID, err)
 			continue
 		}
+		comments, err := s.database.GetPostComments(post.ID)
+		commentsCount := int32(0)
+		if err == nil {
+			commentsCount = int32(len(comments))
+		} else {
+			log.Printf("⚠️ Failed to get comments for post %s: %v", post.ID, err)
+		}
 		pbPosts = append(pbPosts, &pb.PostResponse{
 			PostId:         post.ID,
 			AuthorTgId:     author.TgID,
@@ -563,6 +570,7 @@ func (s *Server) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (*pb.Posts
 			MediaUrl:       post.MediaURL,
 			CreatedAt:      post.CreatedAt,
 			UpdatedAt:      post.UpdatedAt,
+			CommentsCount:  commentsCount,
 		})
 	}
 

@@ -69,6 +69,8 @@ func main() {
 	mux.HandleFunc("/api/post/delete", s.handleDeletePost)
 	mux.HandleFunc("/api/post/comment", s.handleAddComment)
 	mux.HandleFunc("/api/post/comments", s.handleGetComments)
+	mux.HandleFunc("/user/subscribe", s.handleSubscribe)
+	mux.HandleFunc("/user/unsubscribe", s.handleUnsubscribe)
 
 	log.Println("🌐 Mini App HTTP server starting on :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
@@ -143,7 +145,13 @@ func (s *Server) handleGetComments(w http.ResponseWriter, r *http.Request) {
 	postID := r.URL.Query().Get("post_id")
 
 	if tgID == "" || postID == "" {
-		http.Error(w, `{"success":false,"message":"missing tg_id or post_id"}`, http.StatusBadRequest)
+		//http.Error(w, `{"success":false,"message":"missing tg_id or post_id"}`, http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest) // или StatusNotFound и т.д.
+		json.NewEncoder(w).Encode(ApiResponse{
+			Success: false,
+			Message: "missing tg_id or post_id",
+		})
 		return
 	}
 
@@ -228,6 +236,91 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ApiResponse{Success: true, Data: user})
 }
 
+// ================== НОВЫЕ ОБРАБОТЧИКИ ДЛЯ ПОДПИСОК ==================
+
+// POST /user/subscribe
+func (s *Server) handleSubscribe(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	tgID := getTgID(r)
+	if tgID == "" {
+		json.NewEncoder(w).Encode(ApiResponse{Success: false, Message: "unauthorized"})
+		return
+	}
+
+	var req struct {
+		UserId string `json:"user_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		json.NewEncoder(w).Encode(ApiResponse{Success: false, Message: "invalid json"})
+		return
+	}
+
+	ctx := s.grpcContext(r.Context(), tgID)
+
+	// Получаем текущего пользователя
+	currentUser, err := s.grpcClient.GetUserByTgID(ctx, &pb.GetUserByTgIDRequest{TgId: tgID})
+	if err != nil {
+		json.NewEncoder(w).Encode(ApiResponse{Success: false, Message: "user not found"})
+		return
+	}
+
+	resp, err := s.grpcClient.Subscribe(ctx, &pb.SubscribeRequest{
+		FollowerId:  currentUser.UserId,
+		FollowingId: req.UserId,
+	})
+	if err != nil {
+		json.NewEncoder(w).Encode(ApiResponse{Success: false, Message: err.Error()})
+		return
+	}
+
+	json.NewEncoder(w).Encode(ApiResponse{Success: resp.Success, Message: resp.Message})
+}
+
+// POST /user/unsubscribe
+func (s *Server) handleUnsubscribe(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	tgID := getTgID(r)
+	if tgID == "" {
+		json.NewEncoder(w).Encode(ApiResponse{Success: false, Message: "unauthorized"})
+		return
+	}
+
+	var req struct {
+		UserId string `json:"user_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		json.NewEncoder(w).Encode(ApiResponse{Success: false, Message: "invalid json"})
+		return
+	}
+
+	ctx := s.grpcContext(r.Context(), tgID)
+
+	currentUser, err := s.grpcClient.GetUserByTgID(ctx, &pb.GetUserByTgIDRequest{TgId: tgID})
+	if err != nil {
+		json.NewEncoder(w).Encode(ApiResponse{Success: false, Message: "user not found"})
+		return
+	}
+
+	resp, err := s.grpcClient.Unsubscribe(ctx, &pb.UnsubscribeRequest{
+		FollowerId:  currentUser.UserId,
+		FollowingId: req.UserId,
+	})
+	if err != nil {
+		json.NewEncoder(w).Encode(ApiResponse{Success: false, Message: err.Error()})
+		return
+	}
+
+	json.NewEncoder(w).Encode(ApiResponse{Success: resp.Success, Message: resp.Message})
+}
+
 // GET /api/user/search?username=efnms&tg_id=123
 func (s *Server) handleUserSearch(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -308,7 +401,13 @@ func (s *Server) handleDeletePost(w http.ResponseWriter, r *http.Request) {
 	postID := r.URL.Query().Get("post_id")
 
 	if tgID == "" || postID == "" {
-		http.Error(w, `{"success":false,"message":"missing tg_id or post_id"}`, http.StatusBadRequest)
+		//http.Error(w, `{"success":false,"message":"missing tg_id or post_id"}`, http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest) // или StatusNotFound и т.д.
+		json.NewEncoder(w).Encode(ApiResponse{
+			Success: false,
+			Message: "missing tg_id or post_id",
+		})
 		return
 	}
 

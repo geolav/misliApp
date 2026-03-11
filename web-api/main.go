@@ -121,8 +121,13 @@ func (s *Server) handleSubscribe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := s.grpcContext(r.Context(), tgID)
+	currentUser, err := s.grpcClient.GetUserByTgID(ctx, &pb.GetUserByTgIDRequest{TgId: tgID})
+	if err != nil {
+		http.Error(w, `{"success":false,"message":"user not found"}`, http.StatusNotFound)
+		return
+	}
 	resp, err := s.grpcClient.Subscribe(ctx, &pb.SubscribeRequest{
-		FollowerId:  tgID,
+		FollowerId:  currentUser.UserId,
 		FollowingId: body.UserId,
 	})
 	if err != nil {
@@ -164,8 +169,13 @@ func (s *Server) handleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := s.grpcContext(r.Context(), tgID)
+	currentUser, err := s.grpcClient.GetUserByTgID(ctx, &pb.GetUserByTgIDRequest{TgId: tgID})
+	if err != nil {
+		http.Error(w, `{"success":false,"message":"user not found"}`, http.StatusNotFound)
+		return
+	}
 	resp, err := s.grpcClient.Unsubscribe(ctx, &pb.UnsubscribeRequest{
-		FollowerId:  tgID,
+		FollowerId:  currentUser.UserId,
 		FollowingId: body.UserId,
 	})
 	if err != nil {

@@ -183,21 +183,29 @@ func (db *Database) SaveUser(user *UserDB) error {
 
 func (db *Database) GetUserByTgID(tgID string) (*UserDB, error) {
 	user := &UserDB{}
+	var passwordHash sql.NullString
 	err := db.conn.QueryRow(
 		`SELECT id, tg_id, username, name, bio, age, avatar_url, created_at, updated_at, password_hash
          FROM users WHERE tg_id = $1`, tgID,
 	).Scan(&user.ID, &user.TgID, &user.Username, &user.Name, &user.Bio,
-		&user.Age, &user.AvatarURL, &user.CreatedAt, &user.UpdatedAt, &user.PasswordHash)
+		&user.Age, &user.AvatarURL, &user.CreatedAt, &user.UpdatedAt, &passwordHash)
+	if passwordHash.Valid {
+		user.PasswordHash = passwordHash.String
+	}
 	return user, err
 }
 
 func (db *Database) GetUserByUsername(username string) (*UserDB, error) {
 	user := &UserDB{}
+	var passwordHash sql.NullString
 	err := db.conn.QueryRow(
 		`SELECT id, tg_id, username, name, bio, age, avatar_url, created_at, updated_at, password_hash
          FROM users WHERE username = $1`, username,
 	).Scan(&user.ID, &user.TgID, &user.Username, &user.Name, &user.Bio,
-		&user.Age, &user.AvatarURL, &user.CreatedAt, &user.UpdatedAt, &user.PasswordHash)
+		&user.Age, &user.AvatarURL, &user.CreatedAt, &user.UpdatedAt, &passwordHash)
+	if passwordHash.Valid {
+		user.PasswordHash = passwordHash.String
+	}
 	return user, err
 }
 
@@ -211,11 +219,18 @@ func (db *Database) CreatePost(post *PostDB) error {
 
 func (db *Database) GetUserByID(id string) (*UserDB, error) {
 	user := &UserDB{}
+	var passwordHash sql.NullString
 	err := db.conn.QueryRow(
 		`SELECT id, tg_id, username, name, bio, age, avatar_url, created_at, updated_at, password_hash
          FROM users WHERE id = $1`, id,
-	).Scan(&user.ID, &user.TgID, &user.Username, &user.Name, &user.Bio,
-		&user.Age, &user.AvatarURL, &user.CreatedAt, &user.UpdatedAt, &user.PasswordHash)
+	).Scan(
+		&user.ID, &user.TgID, &user.Username, &user.Name,
+		&user.Bio, &user.Age, &user.AvatarURL,
+		&user.CreatedAt, &user.UpdatedAt, &passwordHash,
+	)
+	if passwordHash.Valid {
+		user.PasswordHash = passwordHash.String
+	}
 	return user, err
 }
 

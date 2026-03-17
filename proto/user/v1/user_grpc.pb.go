@@ -38,6 +38,9 @@ const (
 	UserService_Unsubscribe_FullMethodName       = "/user.v1.UserService/Unsubscribe"
 	UserService_GetFeed_FullMethodName           = "/user.v1.UserService/GetFeed"
 	UserService_IsSubscribed_FullMethodName      = "/user.v1.UserService/IsSubscribed"
+	UserService_LoginOrRegister_FullMethodName   = "/user.v1.UserService/LoginOrRegister"
+	UserService_ValidateToken_FullMethodName     = "/user.v1.UserService/ValidateToken"
+	UserService_GetUserByID_FullMethodName       = "/user.v1.UserService/GetUserByID"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -67,6 +70,9 @@ type UserServiceClient interface {
 	Unsubscribe(ctx context.Context, in *UnsubscribeRequest, opts ...grpc.CallOption) (*SubscribeResponse, error)
 	GetFeed(ctx context.Context, in *GetFeedRequest, opts ...grpc.CallOption) (*PostsResponse, error)
 	IsSubscribed(ctx context.Context, in *IsSubscribedRequest, opts ...grpc.CallOption) (*IsSubscribedResponse, error)
+	LoginOrRegister(ctx context.Context, in *LoginOrRegisterRequest, opts ...grpc.CallOption) (*LoginOrRegisterResponse, error)
+	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
+	GetUserByID(ctx context.Context, in *GetUserByIDRequest, opts ...grpc.CallOption) (*UserResponse, error)
 }
 
 type userServiceClient struct {
@@ -267,6 +273,36 @@ func (c *userServiceClient) IsSubscribed(ctx context.Context, in *IsSubscribedRe
 	return out, nil
 }
 
+func (c *userServiceClient) LoginOrRegister(ctx context.Context, in *LoginOrRegisterRequest, opts ...grpc.CallOption) (*LoginOrRegisterResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LoginOrRegisterResponse)
+	err := c.cc.Invoke(ctx, UserService_LoginOrRegister_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidateTokenResponse)
+	err := c.cc.Invoke(ctx, UserService_ValidateToken_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) GetUserByID(ctx context.Context, in *GetUserByIDRequest, opts ...grpc.CallOption) (*UserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UserResponse)
+	err := c.cc.Invoke(ctx, UserService_GetUserByID_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -294,6 +330,9 @@ type UserServiceServer interface {
 	Unsubscribe(context.Context, *UnsubscribeRequest) (*SubscribeResponse, error)
 	GetFeed(context.Context, *GetFeedRequest) (*PostsResponse, error)
 	IsSubscribed(context.Context, *IsSubscribedRequest) (*IsSubscribedResponse, error)
+	LoginOrRegister(context.Context, *LoginOrRegisterRequest) (*LoginOrRegisterResponse, error)
+	ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error)
+	GetUserByID(context.Context, *GetUserByIDRequest) (*UserResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -360,6 +399,15 @@ func (UnimplementedUserServiceServer) GetFeed(context.Context, *GetFeedRequest) 
 }
 func (UnimplementedUserServiceServer) IsSubscribed(context.Context, *IsSubscribedRequest) (*IsSubscribedResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method IsSubscribed not implemented")
+}
+func (UnimplementedUserServiceServer) LoginOrRegister(context.Context, *LoginOrRegisterRequest) (*LoginOrRegisterResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method LoginOrRegister not implemented")
+}
+func (UnimplementedUserServiceServer) ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ValidateToken not implemented")
+}
+func (UnimplementedUserServiceServer) GetUserByID(context.Context, *GetUserByIDRequest) (*UserResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetUserByID not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -724,6 +772,60 @@ func _UserService_IsSubscribed_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_LoginOrRegister_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LoginOrRegisterRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).LoginOrRegister(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_LoginOrRegister_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).LoginOrRegister(ctx, req.(*LoginOrRegisterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_ValidateToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidateTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ValidateToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ValidateToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ValidateToken(ctx, req.(*ValidateTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_GetUserByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserByIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetUserByID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_GetUserByID_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetUserByID(ctx, req.(*GetUserByIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -806,6 +908,18 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "IsSubscribed",
 			Handler:    _UserService_IsSubscribed_Handler,
+		},
+		{
+			MethodName: "LoginOrRegister",
+			Handler:    _UserService_LoginOrRegister_Handler,
+		},
+		{
+			MethodName: "ValidateToken",
+			Handler:    _UserService_ValidateToken_Handler,
+		},
+		{
+			MethodName: "GetUserByID",
+			Handler:    _UserService_GetUserByID_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

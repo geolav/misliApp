@@ -6,15 +6,16 @@ import (
 )
 
 type UserDB struct {
-	ID        string
-	TgID      string
-	Username  string
-	Name      string
-	Bio       string
-	Age       int32
-	AvatarURL string
-	CreatedAt string
-	UpdatedAt string
+	ID           string
+	TgID         string
+	Username     string
+	Name         string
+	Bio          string
+	Age          int32
+	AvatarURL    string
+	CreatedAt    string
+	UpdatedAt    string
+	PasswordHash string
 }
 
 type PostDB struct {
@@ -175,26 +176,28 @@ func (db *Database) RemoveAdmin(telegramID string) error {
 
 func (db *Database) SaveUser(user *UserDB) error {
 	_, err := db.conn.Exec(
-		"INSERT INTO users (id, tg_id, username, name, bio, age, avatar_url, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-		user.ID, user.TgID, user.Username, user.Name, user.Bio, user.Age, user.AvatarURL, user.CreatedAt, user.UpdatedAt)
+		"INSERT INTO users (id, tg_id, username, name, bio, age, avatar_url, created_at, updated_at, password_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+		user.ID, user.TgID, user.Username, user.Name, user.Bio, user.Age, user.AvatarURL, user.CreatedAt, user.UpdatedAt, user.PasswordHash)
 	return err
 }
 
 func (db *Database) GetUserByTgID(tgID string) (*UserDB, error) {
 	user := &UserDB{}
 	err := db.conn.QueryRow(
-		`SELECT id, tg_id, username, name, bio, age, avatar_url, created_at, updated_at 
+		`SELECT id, tg_id, username, name, bio, age, avatar_url, created_at, updated_at, password_hash
          FROM users WHERE tg_id = $1`, tgID,
-	).Scan(&user.ID, &user.TgID, &user.Username, &user.Name, &user.Bio, &user.Age, &user.AvatarURL, &user.CreatedAt, &user.UpdatedAt)
+	).Scan(&user.ID, &user.TgID, &user.Username, &user.Name, &user.Bio,
+		&user.Age, &user.AvatarURL, &user.CreatedAt, &user.UpdatedAt, &user.PasswordHash)
 	return user, err
 }
 
 func (db *Database) GetUserByUsername(username string) (*UserDB, error) {
 	user := &UserDB{}
 	err := db.conn.QueryRow(
-		`SELECT id, tg_id, username, name, bio, age, avatar_url, created_at, updated_at 
+		`SELECT id, tg_id, username, name, bio, age, avatar_url, created_at, updated_at, password_hash
          FROM users WHERE username = $1`, username,
-	).Scan(&user.ID, &user.TgID, &user.Username, &user.Name, &user.Bio, &user.Age, &user.AvatarURL, &user.CreatedAt, &user.UpdatedAt)
+	).Scan(&user.ID, &user.TgID, &user.Username, &user.Name, &user.Bio,
+		&user.Age, &user.AvatarURL, &user.CreatedAt, &user.UpdatedAt, &user.PasswordHash)
 	return user, err
 }
 
@@ -206,21 +209,14 @@ func (db *Database) CreatePost(post *PostDB) error {
 	return err
 }
 
-// database.go - добавить этот метод
 func (db *Database) GetUserByID(id string) (*UserDB, error) {
 	user := &UserDB{}
 	err := db.conn.QueryRow(
-		`SELECT id, tg_id, username, name, bio, age, avatar_url, created_at, updated_at 
+		`SELECT id, tg_id, username, name, bio, age, avatar_url, created_at, updated_at, password_hash
          FROM users WHERE id = $1`, id,
-	).Scan(
-		&user.ID, &user.TgID, &user.Username, &user.Name,
-		&user.Bio, &user.Age, &user.AvatarURL,
-		&user.CreatedAt, &user.UpdatedAt,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return user, nil
+	).Scan(&user.ID, &user.TgID, &user.Username, &user.Name, &user.Bio,
+		&user.Age, &user.AvatarURL, &user.CreatedAt, &user.UpdatedAt, &user.PasswordHash)
+	return user, err
 }
 
 func (db *Database) GetUserPosts(userID string, limit, offset int) ([]*PostDB, error) {

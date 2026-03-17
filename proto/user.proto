@@ -33,6 +33,39 @@ service UserService {
     rpc GetFeed (GetFeedRequest) returns (PostsResponse);
 
     rpc IsSubscribed (IsSubscribedRequest) returns (IsSubscribedResponse);
+
+    rpc LoginOrRegister (LoginOrRegisterRequest) returns (LoginOrRegisterResponse);
+    rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse);
+
+    rpc GetUserByID (GetUserByIDRequest) returns (UserResponse);
+}
+
+message LoginOrRegisterRequest {
+    string username = 1;
+    string password = 2;
+    string name     = 3;  // нужно только при регистрации, при входе игнорируется
+}
+
+message LoginOrRegisterResponse {
+    string token    = 1;
+    string user_id  = 2;
+    string username = 3;
+    string name     = 4;
+    bool   is_new   = 5;  // true = зарегистрировался, false = вошёл
+}
+
+message GetUserByIDRequest {
+    string user_id = 1;
+}
+
+message ValidateTokenRequest {
+    string token = 1;
+}
+
+message ValidateTokenResponse {
+    string user_id  = 1;
+    string username = 2;
+    string tg_id    = 3;
 }
 
 message CreateUserRequest {

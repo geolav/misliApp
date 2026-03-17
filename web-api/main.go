@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 
 	pb "GOApp/proto/user/v1" // Убедись, что путь правильный!
 )
@@ -71,6 +72,7 @@ func main() {
 	mux.HandleFunc("/api/post/comments", s.handleGetComments)
 	mux.HandleFunc("/api/user/subscribe", s.handleSubscribe)
 	mux.HandleFunc("/api/user/unsubscribe", s.handleUnsubscribe)
+	mux.HandleFunc("/api/auth/login", s.handleLoginOrRegister)
 
 	log.Println("🌐 Mini App HTTP server starting on :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
@@ -190,6 +192,46 @@ func (s *Server) handleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) handleLoginOrRegister(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var body struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+		Name     string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, `{"success":false,"message":"invalid json"}`, http.StatusBadRequest)
+		return
+	}
+
+	resp, err := s.grpcClient.LoginOrRegister(r.Context(), &pb.LoginOrRegisterRequest{
+		Username: body.Username,
+		Password: body.Password,
+		Name:     body.Name,
+	})
+	if err != nil {
+		st, _ := status.FromError(err)
+		http.Error(w, `{"success":false,"message":"`+st.Message()+`"}`, http.StatusUnauthorized)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(ApiResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"token":    resp.Token,
+			"user_id":  resp.UserId,
+			"username": resp.Username,
+			"name":     resp.Name,
+			"is_new":   resp.IsNew,
+		},
+	})
+}
+
 func (s *Server) handleGetPost(w http.ResponseWriter, r *http.Request) {
 
 	tgID := getTgID(r)
@@ -301,27 +343,28 @@ func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ApiResponse{Success: true, Data: feed})
 }
 
-// GET /api/profile?tg_id=123
 func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	tgID := getTgID(r)
 	if tgID == "" {
 		http.Error(w, `{"success":false,"message":"unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
-
 	ctx := s.grpcContext(r.Context(), tgID)
 
+	// Сначала пробуем по tg_id
 	user, err := s.grpcClient.GetUserByTgID(ctx, &pb.GetUserByTgIDRequest{TgId: tgID})
 	if err != nil {
-		http.Error(w, `{"success":false,"message":"user not found"}`, http.StatusNotFound)
-		return
+		// Если не нашли — пробуем по user_id (для веб-пользователей)
+		user, err = s.grpcClient.GetUserByID(ctx, &pb.GetUserByIDRequest{UserId: tgID})
+		if err != nil {
+			http.Error(w, `{"success":false,"message":"user not found"}`, http.StatusNotFound)
+			return
+		}
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(ApiResponse{Success: true, Data: user})
 }

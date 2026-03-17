@@ -13,11 +13,15 @@ import (
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc/metadata"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+const jwtSecret = "secret92374893263295230289!@#@!$!214()#)&*#"
 
 type Server struct {
 	pb.UnimplementedUserServiceServer
@@ -100,6 +104,149 @@ func (s *Server) GetUserByUsername(ctx context.Context, req *pb.GetUserRequest) 
 		FollowersCount: followersCount,
 		FollowingCount: followingCount,
 		IsSubscribed:   isSubscribed,
+	}, nil
+}
+
+func (s *Server) GetUserByID(ctx context.Context, req *pb.GetUserByIDRequest) (*pb.UserResponse, error) {
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	user, err := s.database.GetUserByID(req.UserId)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "user not found")
+	}
+	postsCount, _ := s.database.GetUserPostsCount(user.ID)
+	followersCount, _ := s.database.GetFollowersCount(user.ID)
+	followingCount, _ := s.database.GetFollowingCount(user.ID)
+	return &pb.UserResponse{
+		UserId:         user.ID,
+		Name:           user.Name,
+		Username:       user.Username,
+		Age:            user.Age,
+		CreatedAt:      user.CreatedAt,
+		TgId:           user.TgID,
+		Bio:            user.Bio,
+		AvatarUrl:      user.AvatarURL,
+		PostsCount:     postsCount,
+		FollowersCount: followersCount,
+		FollowingCount: followingCount,
+	}, nil
+}
+
+func (s *Server) LoginOrRegister(ctx context.Context, req *pb.LoginOrRegisterRequest) (*pb.LoginOrRegisterResponse, error) {
+	if req.Username == "" || req.Password == "" {
+		return nil, status.Error(codes.InvalidArgument, "username and password are required")
+	}
+
+	var userID string
+	var isNew bool
+
+	existing, err := s.database.GetUserByUsername(req.Username)
+	if err != nil {
+		// Пользователь не найден — регистрируем
+		if req.Name == "" {
+			req.Name = req.Username
+		}
+
+		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to hash password")
+		}
+
+		newUser := &database.UserDB{
+			ID:           uuid.New().String(),
+			TgID:         "web_" + uuid.New().String(), // заглушка для tg_id
+			Username:     req.Username,
+			Name:         req.Name,
+			PasswordHash: string(hash),
+			CreatedAt:    time.Now().Format(time.DateTime),
+			UpdatedAt:    time.Now().Format(time.DateTime),
+		}
+
+		if err := s.database.SaveUser(newUser); err != nil {
+			if strings.Contains(err.Error(), "duplicate key") ||
+				strings.Contains(err.Error(), "unique constraint") {
+				return nil, status.Error(codes.AlreadyExists, "username already taken")
+			}
+			return nil, status.Error(codes.Internal, "failed to save user")
+		}
+
+		userID = newUser.ID
+		isNew = true
+	} else {
+		// Пользователь найден — проверяем пароль
+		if existing.PasswordHash == "" {
+			return nil, status.Error(codes.PermissionDenied, "this account was created via Telegram, use the bot to login")
+		}
+
+		if err := bcrypt.CompareHashAndPassword([]byte(existing.PasswordHash), []byte(req.Password)); err != nil {
+			return nil, status.Error(codes.PermissionDenied, "invalid password")
+		}
+
+		userID = existing.ID
+		isNew = false
+	}
+
+	// Генерируем JWT
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id":  userID,
+		"username": req.Username,
+		"exp":      time.Now().Add(30 * 24 * time.Hour).Unix(),
+	})
+
+	tokenStr, err := token.SignedString([]byte(jwtSecret))
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to generate token")
+	}
+
+	name := req.Username
+	if !isNew && existing != nil {
+		name = existing.Name
+	}
+
+	return &pb.LoginOrRegisterResponse{
+		Token:    tokenStr,
+		UserId:   userID,
+		Username: req.Username,
+		Name:     name,
+		IsNew:    isNew,
+	}, nil
+}
+
+func (s *Server) ValidateToken(ctx context.Context, req *pb.ValidateTokenRequest) (*pb.ValidateTokenResponse, error) {
+	if req.Token == "" {
+		return nil, status.Error(codes.InvalidArgument, "token is required")
+	}
+
+	token, err := jwt.Parse(req.Token, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, status.Error(codes.Unauthenticated, "invalid signing method")
+		}
+		return []byte(jwtSecret), nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, status.Error(codes.Unauthenticated, "invalid or expired token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "invalid token claims")
+	}
+
+	userID, _ := claims["user_id"].(string)
+	username, _ := claims["username"].(string)
+
+	user, err := s.database.GetUserByID(userID)
+	tgID := ""
+	if err == nil {
+		tgID = user.TgID
+	}
+
+	return &pb.ValidateTokenResponse{
+		UserId:   userID,
+		Username: username,
+		TgId:     tgID,
 	}, nil
 }
 

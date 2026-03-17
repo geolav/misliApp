@@ -174,6 +174,8 @@ func (s *Server) LoginOrRegister(ctx context.Context, req *pb.LoginOrRegisterReq
 		userID = newUser.ID
 		isNew = true
 	} else {
+		log.Printf("DEBUG LoginOrRegister: username=%s, passwordHash='%s', len=%d",
+			existing.Username, existing.PasswordHash, len(existing.PasswordHash))
 		if existing.PasswordHash == "" {
 			// Первый вход с веба — устанавливаем пароль
 			hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)

@@ -174,15 +174,21 @@ func (s *Server) LoginOrRegister(ctx context.Context, req *pb.LoginOrRegisterReq
 		userID = newUser.ID
 		isNew = true
 	} else {
-		// Пользователь найден — проверяем пароль
 		if existing.PasswordHash == "" {
-			return nil, status.Error(codes.PermissionDenied, "this account was created via Telegram, use the bot to login")
+			// Первый вход с веба — устанавливаем пароль
+			hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+			if err != nil {
+				return nil, status.Error(codes.Internal, "failed to hash password")
+			}
+			if err := s.database.SetPassword(existing.ID, string(hash)); err != nil {
+				return nil, status.Error(codes.Internal, "failed to set password")
+			}
+		} else {
+			// Пароль уже есть — проверяем
+			if err := bcrypt.CompareHashAndPassword([]byte(existing.PasswordHash), []byte(req.Password)); err != nil {
+				return nil, status.Error(codes.PermissionDenied, "invalid password")
+			}
 		}
-
-		if err := bcrypt.CompareHashAndPassword([]byte(existing.PasswordHash), []byte(req.Password)); err != nil {
-			return nil, status.Error(codes.PermissionDenied, "invalid password")
-		}
-
 		userID = existing.ID
 		isNew = false
 	}

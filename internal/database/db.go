@@ -219,6 +219,13 @@ func (db *Database) GetUserByID(id string) (*UserDB, error) {
 	return user, err
 }
 
+func (db *Database) SetPassword(userID, hash string) error {
+	_, err := db.conn.Exec(
+		"UPDATE users SET password_hash = $1 WHERE id = $2",
+		hash, userID)
+	return err
+}
+
 func (db *Database) GetUserPosts(userID string, limit, offset int) ([]*PostDB, error) {
 	rows, err := db.conn.Query(
 		`SELECT id, user_id, content, media_url, created_at, updated_at 

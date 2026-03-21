@@ -416,7 +416,10 @@
             <div class="brand">Misli · мысли вслух</div>
             <div class="muted">делись мыслями, читай других</div>
         </div>
-        <div id="userPill" class="pill">загрузка...</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <div id="userPill" class="pill">загрузка...</div>
+            <button id="logoutBtn" class="btn-ghost" style="display:none;padding:8px 12px;font-size:13px;">Выйти</button>
+        </div>
     </header>
 
     <nav class="tabs" id="tabs">
@@ -761,6 +764,9 @@
                         <div class="stat"><b>${myPosts.length}</b><small>постов</small></div>
                         <div class="stat"><b>${user.followers_count || 0}</b><small>подписчиков</small></div>
                         <div class="stat"><b>${user.following_count || 0}</b><small>подписок</small></div>
+                    </div>
+                    <div class="actions" style="margin-top:14px;">
+                        <button id="deleteAccountBtn" class="btn-danger" style="font-size:13px;">🗑️ Удалить аккаунт</button>
                     </div>
                 </div>
                 <div class="card">

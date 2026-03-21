@@ -735,7 +735,7 @@
                 </div>
                 <div class="actions">
                     <button class="btn-alt" data-open="${post.post_id}">Комментарии</button>
-                    ${post.author_tg_id === effectiveTgId ?
+                    ${(post.author_tg_id === effectiveTgId || post.author_tg_id === state.currentUser?.tg_id) ?
             `<button class="btn-danger" data-delete="${post.post_id}">Удалить</button>` : ''}
                 </div>
             </article>
@@ -752,7 +752,7 @@
         }
 
         const user = state.currentUser;
-        const myPosts = state.feed.filter(p => p.author_tg_id === effectiveTgId);
+        const myPosts = state.feed.filter(p => p.author_tg_id === effectiveTgId || p.author_tg_id === user.tg_id);
 
         root.innerHTML = `
             <div class="grid two-col">
@@ -992,11 +992,24 @@
                 errEl.style.display = 'block';
                 return;
             }
-            // Сохраняем токен и tg_id
-            setAuth(json.data.token, json.data.user_id);
-            // Используем user_id как effectiveTgId для совместимости с остальным кодом
-            effectiveTgId = json.data.user_id;
+            // Получаем профиль чтобы узнать tg_id (web_xxxx) — он нужен для всех API
+            try {
+                const profileRes = await fetch(`/api/profile?tg_id=${encodeURIComponent(json.data.user_id)}`);
+                const profileJson = await profileRes.json();
+                if (profileJson.success && profileJson.data?.tg_id) {
+                    effectiveTgId = profileJson.data.tg_id;
+                    setAuth(json.data.token, profileJson.data.tg_id);
+                } else {
+                    effectiveTgId = json.data.user_id;
+                    setAuth(json.data.token, json.data.user_id);
+                }
+            } catch(err) {
+                effectiveTgId = json.data.user_id;
+                setAuth(json.data.token, json.data.user_id);
+            }
             document.getElementById('registrationGate').style.display = 'none';
+            const lb = document.getElementById('logoutBtn');
+            if (lb) lb.style.display = 'block';
             init();
         });
 

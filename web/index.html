@@ -507,10 +507,18 @@
             tg.setBackgroundColor("#0e1218");
         }
 
-        // Получаем tg_id
+        // Получаем tg_id — сразу из всех источников включая localStorage
         const tgId = tg?.initDataUnsafe?.user?.id?.toString() || '';
         const urlTgId = new URLSearchParams(window.location.search).get('tg_id');
-        effectiveTgId = tgId || urlTgId || '';
+        effectiveTgId = tgId || urlTgId || localStorage.getItem('misli_tg_id') || '';
+
+        // Скрываем gate сразу если есть сессия
+        const gate = document.getElementById('registrationGate');
+        if (effectiveTgId) {
+            gate.style.display = 'none';
+            const lb = document.getElementById('logoutBtn');
+            if (lb) lb.style.display = 'block';
+        }
 
         // Вешаем обработчики
         setupEventListeners();
@@ -612,15 +620,18 @@
         try {
             state.currentUser = await apiCall('/profile');
             updateUserPill();
-            document.getElementById("registrationGate")?.classList.add('hide');
+            document.getElementById('registrationGate').style.display = 'none';
+            const lb = document.getElementById('logoutBtn');
+            if (lb) lb.style.display = 'block';
             renderProfile();
         } catch (e) {
-            if (e.message.includes('not found')) {
-                document.getElementById("registrationGate")?.classList.remove('hide');
-                const tgUsername = tg?.initDataUnsafe?.user?.username || '';
-                const usernameInput = document.getElementById("regUsername");
-                if (usernameInput) usernameInput.value = tgUsername;
-            }
+            // Чистим сессию и показываем gate
+            localStorage.removeItem('misli_tg_id');
+            localStorage.removeItem('misli_token');
+            effectiveTgId = '';
+            document.getElementById('registrationGate').style.display = 'grid';
+            const lb = document.getElementById('logoutBtn');
+            if (lb) lb.style.display = 'none';
             updateUserPill();
         }
     }
@@ -975,23 +986,11 @@
                 errEl.style.display = 'block';
                 return;
             }
-            // Получаем профиль чтобы узнать настоящий tg_id (web_xxxx)
-            try {
-                const profileRes = await fetch(`/api/profile?tg_id=${encodeURIComponent(json.data.user_id)}`);
-                const profileJson = await profileRes.json();
-                if (profileJson.success && profileJson.data?.tg_id) {
-                    effectiveTgId = profileJson.data.tg_id;
-                    setAuth(json.data.token, profileJson.data.tg_id);
-                } else {
-                    effectiveTgId = json.data.user_id;
-                    setAuth(json.data.token, json.data.user_id);
-                }
-            } catch(err) {
-                effectiveTgId = json.data.user_id;
-                setAuth(json.data.token, json.data.user_id);
-            }
+            // Сохраняем токен и tg_id
+            setAuth(json.data.token, json.data.user_id);
+            // Используем user_id как effectiveTgId для совместимости с остальным кодом
+            effectiveTgId = json.data.user_id;
             document.getElementById('registrationGate').style.display = 'none';
-            document.getElementById('logoutBtn').style.display = 'block';
             init();
         });
 
@@ -1003,6 +1002,15 @@
             if (deleteBtn) deletePost(deleteBtn.dataset.delete);
         });
 
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) logoutBtn.addEventListener('click', () => {
+            if (confirm('Выйти из аккаунта?')) logout();
+        });
+
+        document.body.addEventListener('click', (e) => {
+            if (e.target.id === 'deleteAccountBtn') deleteAccount();
+        });
+
         const postDialog = document.getElementById("postDialog");
         if (postDialog) {
             postDialog.addEventListener("click", (e) => {
@@ -1011,6 +1019,36 @@
                     rect.left <= e.clientX && e.clientX <= rect.left + rect.width;
                 if (!inDialog) e.currentTarget.close();
             });
+        }
+    }
+
+    // ========== ВЫХОД И УДАЛЕНИЕ ==========
+    function logout() {
+        localStorage.removeItem('misli_token');
+        localStorage.removeItem('misli_tg_id');
+        effectiveTgId = '';
+        state.currentUser = null;
+        state.feed = [];
+        updateUserPill();
+        const lb = document.getElementById('logoutBtn');
+        if (lb) lb.style.display = 'none';
+        document.getElementById('registrationGate').style.display = 'grid';
+        document.getElementById('loginUsername').value = '';
+        document.getElementById('loginPassword').value = '';
+        document.getElementById('loginName').value = '';
+        document.getElementById('loginError').style.display = 'none';
+        renderFeed();
+        renderProfile();
+    }
+
+    async function deleteAccount() {
+        if (!confirm('⚠️ Удалить аккаунт? Все посты и комментарии будут удалены.')) return;
+        if (!confirm('Вы уверены? Это необратимо.')) return;
+        try {
+            await apiCall('/user/delete', 'POST');
+            logout();
+        } catch(e) {
+            alert('Ошибка удаления: ' + e.message);
         }
     }
 

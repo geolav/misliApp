@@ -416,10 +416,7 @@
             <div class="brand">Misli · мысли вслух</div>
             <div class="muted">делись мыслями, читай других</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-            <div id="userPill" class="pill">загрузка...</div>
-            <button id="logoutBtn" class="btn-ghost" style="display:none;padding:8px 12px;font-size:13px;">Выйти</button>
-        </div>
+        <div id="userPill" class="pill">загрузка...</div>
     </header>
 
     <nav class="tabs" id="tabs">
@@ -513,7 +510,13 @@
         // Получаем tg_id
         const tgId = tg?.initDataUnsafe?.user?.id?.toString() || '';
         const urlTgId = new URLSearchParams(window.location.search).get('tg_id');
-        effectiveTgId = tgId || urlTgId || '';
+        effectiveTgId = tgId || urlTgId || localStorage.getItem('misli_tg_id') || '';
+
+        // Скрываем gate сразу если есть сессия
+        if (effectiveTgId) {
+            document.getElementById('registrationGate').style.display = 'none';
+            document.getElementById('logoutBtn').style.display = 'block';
+        }
 
         // Вешаем обработчики
         setupEventListeners();
@@ -615,14 +618,21 @@
         try {
             state.currentUser = await apiCall('/profile');
             updateUserPill();
-            document.getElementById("registrationGate")?.classList.add('hide');
+            document.getElementById('registrationGate').style.display = 'none';
+            document.getElementById('logoutBtn').style.display = 'block';
             renderProfile();
         } catch (e) {
-            if (e.message.includes('not found')) {
-                document.getElementById("registrationGate")?.classList.remove('hide');
-                const tgUsername = tg?.initDataUnsafe?.user?.username || '';
-                const usernameInput = document.getElementById("regUsername");
-                if (usernameInput) usernameInput.value = tgUsername;
+            // Если нет сохранённой сессии — показываем gate
+            if (!localStorage.getItem('misli_tg_id')) {
+                document.getElementById('registrationGate').style.display = 'grid';
+                document.getElementById('logoutBtn').style.display = 'none';
+            } else {
+                // Сессия есть но профиль не загрузился — чистим и показываем gate
+                localStorage.removeItem('misli_tg_id');
+                localStorage.removeItem('misli_token');
+                effectiveTgId = '';
+                document.getElementById('registrationGate').style.display = 'grid';
+                document.getElementById('logoutBtn').style.display = 'none';
             }
             updateUserPill();
         }
@@ -753,9 +763,6 @@
                         <div class="stat"><b>${myPosts.length}</b><small>постов</small></div>
                         <div class="stat"><b>${user.followers_count || 0}</b><small>подписчиков</small></div>
                         <div class="stat"><b>${user.following_count || 0}</b><small>подписок</small></div>
-                    </div>
-                    <div class="actions" style="margin-top:14px;">
-                        <button id="deleteAccountBtn" class="btn-danger" style="font-size:13px;">🗑️ Удалить аккаунт</button>
                     </div>
                 </div>
                 <div class="card">
@@ -986,7 +993,6 @@
             // Используем user_id как effectiveTgId для совместимости с остальным кодом
             effectiveTgId = json.data.user_id;
             document.getElementById('registrationGate').style.display = 'none';
-            document.getElementById('logoutBtn').style.display = 'block';
             init();
         });
 
@@ -998,14 +1004,6 @@
             if (deleteBtn) deletePost(deleteBtn.dataset.delete);
         });
 
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            if (confirm('Выйти из аккаунта?')) logout();
-        });
-
-        document.body.addEventListener('click', (e) => {
-            if (e.target.id === 'deleteAccountBtn') deleteAccount();
-        });
-
         const postDialog = document.getElementById("postDialog");
         if (postDialog) {
             postDialog.addEventListener("click", (e) => {
@@ -1014,34 +1012,6 @@
                     rect.left <= e.clientX && e.clientX <= rect.left + rect.width;
                 if (!inDialog) e.currentTarget.close();
             });
-        }
-    }
-
-    // ========== ВЫХОД И УДАЛЕНИЕ АККАУНТА ==========
-    function logout() {
-        localStorage.removeItem('misli_token');
-        localStorage.removeItem('misli_tg_id');
-        effectiveTgId = '';
-        state.currentUser = null;
-        state.feed = [];
-        updateUserPill();
-        document.getElementById('logoutBtn').style.display = 'none';
-        document.getElementById('registrationGate').style.opacity = '1';
-        document.getElementById('registrationGate').style.display = 'grid';
-        document.getElementById('loginUsername').value = '';
-        document.getElementById('loginPassword').value = '';
-        document.getElementById('loginName').value = '';
-        document.getElementById('loginError').style.display = 'none';
-    }
-
-    async function deleteAccount() {
-        if (!confirm('⚠️ Удалить аккаунт? Это действие необратимо — все посты и комментарии будут удалены.')) return;
-        if (!confirm('Вы уверены? Аккаунт будет удалён навсегда.')) return;
-        try {
-            await apiCall('/user/delete', 'POST');
-            logout();
-        } catch(e) {
-            alert('Ошибка удаления: ' + e.message);
         }
     }
 

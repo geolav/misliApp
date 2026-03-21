@@ -39,6 +39,19 @@ type SearchRequest struct {
 	Username string `json:"username"`
 }
 
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	// Подключаемся к твоему gRPC серверу
 	conn, err := grpc.Dial("localhost:50051",
@@ -76,7 +89,8 @@ func main() {
 	mux.HandleFunc("/api/user/delete", s.handleDeleteUser)
 
 	log.Println("🌐 Mini App HTTP server starting on :8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	//log.Fatal(http.ListenAndServe(":8080", mux))
+	log.Fatal(http.ListenAndServe(":8080", corsMiddleware(mux)))
 }
 
 // Вспомогательная функция для получения tg_id

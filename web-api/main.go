@@ -132,13 +132,11 @@ func (s *Server) handleSubscribe(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	tgID := getTgID(r)
 	if tgID == "" {
 		http.Error(w, `{"success":false,"message":"unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
-
 	var body struct {
 		UserId string `json:"user_id"`
 	}
@@ -146,17 +144,14 @@ func (s *Server) handleSubscribe(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"success":false,"message":"invalid json"}`, http.StatusBadRequest)
 		return
 	}
-
-	if body.UserId == "" {
-		http.Error(w, `{"success":false,"message":"missing user_id"}`, http.StatusBadRequest)
-		return
-	}
-
 	ctx := s.grpcContext(r.Context(), tgID)
 	currentUser, err := s.grpcClient.GetUserByTgID(ctx, &pb.GetUserByTgIDRequest{TgId: tgID})
 	if err != nil {
-		http.Error(w, `{"success":false,"message":"user not found"}`, http.StatusNotFound)
-		return
+		currentUser, err = s.grpcClient.GetUserByID(ctx, &pb.GetUserByIDRequest{UserId: tgID})
+		if err != nil {
+			http.Error(w, `{"success":false,"message":"user not found"}`, http.StatusNotFound)
+			return
+		}
 	}
 	resp, err := s.grpcClient.Subscribe(ctx, &pb.SubscribeRequest{
 		FollowerId:  currentUser.UserId,
@@ -166,12 +161,8 @@ func (s *Server) handleSubscribe(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"success":false,"message":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(ApiResponse{
-		Success: resp.Success,
-		Message: resp.Message,
-	})
+	json.NewEncoder(w).Encode(ApiResponse{Success: resp.Success, Message: resp.Message})
 }
 
 // POST /api/user/unsubscribe
@@ -180,13 +171,11 @@ func (s *Server) handleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	tgID := getTgID(r)
 	if tgID == "" {
 		http.Error(w, `{"success":false,"message":"unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
-
 	var body struct {
 		UserId string `json:"user_id"`
 	}
@@ -194,17 +183,14 @@ func (s *Server) handleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"success":false,"message":"invalid json"}`, http.StatusBadRequest)
 		return
 	}
-
-	if body.UserId == "" {
-		http.Error(w, `{"success":false,"message":"missing user_id"}`, http.StatusBadRequest)
-		return
-	}
-
 	ctx := s.grpcContext(r.Context(), tgID)
 	currentUser, err := s.grpcClient.GetUserByTgID(ctx, &pb.GetUserByTgIDRequest{TgId: tgID})
 	if err != nil {
-		http.Error(w, `{"success":false,"message":"user not found"}`, http.StatusNotFound)
-		return
+		currentUser, err = s.grpcClient.GetUserByID(ctx, &pb.GetUserByIDRequest{UserId: tgID})
+		if err != nil {
+			http.Error(w, `{"success":false,"message":"user not found"}`, http.StatusNotFound)
+			return
+		}
 	}
 	resp, err := s.grpcClient.Unsubscribe(ctx, &pb.UnsubscribeRequest{
 		FollowerId:  currentUser.UserId,
@@ -214,12 +200,8 @@ func (s *Server) handleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"success":false,"message":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(ApiResponse{
-		Success: resp.Success,
-		Message: resp.Message,
-	})
+	json.NewEncoder(w).Encode(ApiResponse{Success: resp.Success, Message: resp.Message})
 }
 
 func (s *Server) handleLoginOrRegister(w http.ResponseWriter, r *http.Request) {
@@ -285,21 +267,24 @@ func (s *Server) handleGetPost(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleUserPosts(w http.ResponseWriter, r *http.Request) {
 	tgID := r.URL.Query().Get("tg_id")
 	ctx := s.grpcContext(r.Context(), tgID)
+	user, err := s.grpcClient.GetUserByTgID(ctx, &pb.GetUserByTgIDRequest{TgId: tgID})
+	if err != nil {
+		user, err = s.grpcClient.GetUserByID(ctx, &pb.GetUserByIDRequest{UserId: tgID})
+		if err != nil {
+			http.Error(w, `{"success":false,"message":"user not found"}`, http.StatusNotFound)
+			return
+		}
+	}
 	posts, err := s.grpcClient.GetUserPosts(ctx, &pb.GetUserPostsRequest{
-		TgId:     tgID,
+		TgId:     user.TgId,
 		Page:     1,
 		PageSize: 20,
 	})
-
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-
-	json.NewEncoder(w).Encode(ApiResponse{
-		Success: true,
-		Data:    posts,
-	})
+	json.NewEncoder(w).Encode(ApiResponse{Success: true, Data: posts})
 }
 
 // GET /api/post/comments?post_id=...
@@ -342,23 +327,20 @@ func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	tgID := getTgID(r)
 	if tgID == "" {
 		http.Error(w, `{"success":false,"message":"unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
-
 	ctx := s.grpcContext(r.Context(), tgID)
-
-	// Получаем пользователя по tg_id
 	user, err := s.grpcClient.GetUserByTgID(ctx, &pb.GetUserByTgIDRequest{TgId: tgID})
 	if err != nil {
-		http.Error(w, `{"success":false,"message":"user not found"}`, http.StatusNotFound)
-		return
+		user, err = s.grpcClient.GetUserByID(ctx, &pb.GetUserByIDRequest{UserId: tgID})
+		if err != nil {
+			http.Error(w, `{"success":false,"message":"user not found"}`, http.StatusNotFound)
+			return
+		}
 	}
-
-	// Получаем ленту (пагинацию можно добавить позже)
 	feed, err := s.grpcClient.GetFeed(ctx, &pb.GetFeedRequest{
 		UserId:   user.UserId,
 		Page:     1,
@@ -368,7 +350,6 @@ func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"success":false,"message":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(ApiResponse{Success: true, Data: feed})
 }
@@ -384,11 +365,8 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := s.grpcContext(r.Context(), tgID)
-
-	// Сначала пробуем по tg_id
 	user, err := s.grpcClient.GetUserByTgID(ctx, &pb.GetUserByTgIDRequest{TgId: tgID})
 	if err != nil {
-		// Если не нашли — пробуем по user_id (для веб-пользователей)
 		user, err = s.grpcClient.GetUserByID(ctx, &pb.GetUserByIDRequest{UserId: tgID})
 		if err != nil {
 			http.Error(w, `{"success":false,"message":"user not found"}`, http.StatusNotFound)
@@ -439,23 +417,28 @@ func (s *Server) handleCreatePost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	tgID := getTgID(r)
 	if tgID == "" {
 		http.Error(w, `{"success":false,"message":"unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
-
 	var req PostRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"success":false,"message":"invalid json"}`, http.StatusBadRequest)
 		return
 	}
-
 	ctx := s.grpcContext(r.Context(), tgID)
-
+	// Получаем настоящий tg_id если передан user_id
+	user, err := s.grpcClient.GetUserByTgID(ctx, &pb.GetUserByTgIDRequest{TgId: tgID})
+	if err != nil {
+		user, err = s.grpcClient.GetUserByID(ctx, &pb.GetUserByIDRequest{UserId: tgID})
+		if err != nil {
+			http.Error(w, `{"success":false,"message":"user not found"}`, http.StatusNotFound)
+			return
+		}
+	}
 	post, err := s.grpcClient.CreatePost(ctx, &pb.CreatePostRequest{
-		TgId:     tgID,
+		TgId:     user.TgId,
 		Content:  req.Content,
 		MediaUrl: req.MediaUrl,
 	})
@@ -463,7 +446,6 @@ func (s *Server) handleCreatePost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"success":false,"message":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(ApiResponse{Success: true, Data: post})
 }
@@ -474,24 +456,21 @@ func (s *Server) handleDeletePost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	tgID := getTgID(r)
 	postID := r.URL.Query().Get("post_id")
-
 	if tgID == "" || postID == "" {
 		http.Error(w, `{"success":false,"message":"missing tg_id or post_id"}`, http.StatusBadRequest)
 		return
 	}
-
 	ctx := s.grpcContext(r.Context(), tgID)
-
-	// Сначала получаем пользователя, чтобы узнать его user_id
 	user, err := s.grpcClient.GetUserByTgID(ctx, &pb.GetUserByTgIDRequest{TgId: tgID})
 	if err != nil {
-		http.Error(w, `{"success":false,"message":"user not found"}`, http.StatusNotFound)
-		return
+		user, err = s.grpcClient.GetUserByID(ctx, &pb.GetUserByIDRequest{UserId: tgID})
+		if err != nil {
+			http.Error(w, `{"success":false,"message":"user not found"}`, http.StatusNotFound)
+			return
+		}
 	}
-
 	resp, err := s.grpcClient.DeletePost(ctx, &pb.DeletePostRequest{
 		PostId: postID,
 		UserId: user.UserId,
@@ -500,7 +479,6 @@ func (s *Server) handleDeletePost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"success":false,"message":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(ApiResponse{Success: resp.Success, Message: resp.Message})
 }
@@ -512,31 +490,34 @@ func (s *Server) handleAddComment(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	tgID := getTgID(r)
 	if tgID == "" {
 		http.Error(w, `{"success":false,"message":"unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
-
 	var req CommentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"success":false,"message":"invalid json"}`, http.StatusBadRequest)
 		return
 	}
-
 	ctx := s.grpcContext(r.Context(), tgID)
-
+	user, err := s.grpcClient.GetUserByTgID(ctx, &pb.GetUserByTgIDRequest{TgId: tgID})
+	if err != nil {
+		user, err = s.grpcClient.GetUserByID(ctx, &pb.GetUserByIDRequest{UserId: tgID})
+		if err != nil {
+			http.Error(w, `{"success":false,"message":"user not found"}`, http.StatusNotFound)
+			return
+		}
+	}
 	comment, err := s.grpcClient.AddComment(ctx, &pb.AddCommentRequest{
 		PostId:  req.PostId,
-		TgId:    tgID,
+		TgId:    user.TgId,
 		Content: req.Content,
 	})
 	if err != nil {
 		http.Error(w, `{"success":false,"message":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(ApiResponse{Success: true, Data: comment})
 }

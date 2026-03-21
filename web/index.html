@@ -510,13 +510,7 @@
         // Получаем tg_id
         const tgId = tg?.initDataUnsafe?.user?.id?.toString() || '';
         const urlTgId = new URLSearchParams(window.location.search).get('tg_id');
-        effectiveTgId = tgId || urlTgId || localStorage.getItem('misli_tg_id') || '';
-
-        // Скрываем gate сразу если есть сессия
-        if (effectiveTgId) {
-            document.getElementById('registrationGate').style.display = 'none';
-            document.getElementById('logoutBtn').style.display = 'block';
-        }
+        effectiveTgId = tgId || urlTgId || '';
 
         // Вешаем обработчики
         setupEventListeners();
@@ -618,21 +612,14 @@
         try {
             state.currentUser = await apiCall('/profile');
             updateUserPill();
-            document.getElementById('registrationGate').style.display = 'none';
-            document.getElementById('logoutBtn').style.display = 'block';
+            document.getElementById("registrationGate")?.classList.add('hide');
             renderProfile();
         } catch (e) {
-            // Если нет сохранённой сессии — показываем gate
-            if (!localStorage.getItem('misli_tg_id')) {
-                document.getElementById('registrationGate').style.display = 'grid';
-                document.getElementById('logoutBtn').style.display = 'none';
-            } else {
-                // Сессия есть но профиль не загрузился — чистим и показываем gate
-                localStorage.removeItem('misli_tg_id');
-                localStorage.removeItem('misli_token');
-                effectiveTgId = '';
-                document.getElementById('registrationGate').style.display = 'grid';
-                document.getElementById('logoutBtn').style.display = 'none';
+            if (e.message.includes('not found')) {
+                document.getElementById("registrationGate")?.classList.remove('hide');
+                const tgUsername = tg?.initDataUnsafe?.user?.username || '';
+                const usernameInput = document.getElementById("regUsername");
+                if (usernameInput) usernameInput.value = tgUsername;
             }
             updateUserPill();
         }
@@ -988,11 +975,23 @@
                 errEl.style.display = 'block';
                 return;
             }
-            // Сохраняем токен и tg_id
-            setAuth(json.data.token, json.data.user_id);
-            // Используем user_id как effectiveTgId для совместимости с остальным кодом
-            effectiveTgId = json.data.user_id;
+            // Получаем профиль чтобы узнать настоящий tg_id (web_xxxx)
+            try {
+                const profileRes = await fetch(`/api/profile?tg_id=${encodeURIComponent(json.data.user_id)}`);
+                const profileJson = await profileRes.json();
+                if (profileJson.success && profileJson.data?.tg_id) {
+                    effectiveTgId = profileJson.data.tg_id;
+                    setAuth(json.data.token, profileJson.data.tg_id);
+                } else {
+                    effectiveTgId = json.data.user_id;
+                    setAuth(json.data.token, json.data.user_id);
+                }
+            } catch(err) {
+                effectiveTgId = json.data.user_id;
+                setAuth(json.data.token, json.data.user_id);
+            }
             document.getElementById('registrationGate').style.display = 'none';
+            document.getElementById('logoutBtn').style.display = 'block';
             init();
         });
 

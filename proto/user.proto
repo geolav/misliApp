@@ -38,6 +38,8 @@ service UserService {
     rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse);
 
     rpc GetUserByID (GetUserByIDRequest) returns (UserResponse);
+
+    rpc DeleteUser (DeleteUserRequest) returns (DeleteResponse);
 }
 
 message LoginOrRegisterRequest {
@@ -255,6 +257,10 @@ message GetFeedRequest {
     string user_id = 1;
     int32 page = 2;
     int32 page_size = 3;
+}
+
+message DeleteUserRequest {
+    string user_id = 1;
 }
 
 message DeleteResponse {

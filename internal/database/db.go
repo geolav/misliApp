@@ -217,6 +217,11 @@ func (db *Database) CreatePost(post *PostDB) error {
 	return err
 }
 
+func (db *Database) DeleteUser(userID string) error {
+	_, err := db.conn.Exec("DELETE FROM users WHERE id = $1", userID)
+	return err
+}
+
 func (db *Database) GetUserByID(id string) (*UserDB, error) {
 	user := &UserDB{}
 	var passwordHash sql.NullString

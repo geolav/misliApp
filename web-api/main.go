@@ -73,6 +73,7 @@ func main() {
 	mux.HandleFunc("/api/user/subscribe", s.handleSubscribe)
 	mux.HandleFunc("/api/user/unsubscribe", s.handleUnsubscribe)
 	mux.HandleFunc("/api/auth/login", s.handleLoginOrRegister)
+	mux.HandleFunc("/api/user/delete", s.handleDeleteUser)
 
 	log.Println("🌐 Mini App HTTP server starting on :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
@@ -95,6 +96,35 @@ func (s *Server) grpcContext(ctx context.Context, tgID string) context.Context {
 }
 
 // ================== API HANDLERS ==================
+
+func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	tgID := getTgID(r)
+	if tgID == "" {
+		http.Error(w, `{"success":false,"message":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+	ctx := s.grpcContext(r.Context(), tgID)
+	user, err := s.grpcClient.GetUserByTgID(ctx, &pb.GetUserByTgIDRequest{TgId: tgID})
+	if err != nil {
+		user2, err2 := s.grpcClient.GetUserByID(ctx, &pb.GetUserByIDRequest{UserId: tgID})
+		if err2 != nil {
+			http.Error(w, `{"success":false,"message":"user not found"}`, http.StatusNotFound)
+			return
+		}
+		user = user2
+	}
+	_, err = s.grpcClient.DeleteUser(ctx, &pb.DeleteUserRequest{UserId: user.UserId})
+	if err != nil {
+		http.Error(w, `{"success":false,"message":"failed to delete"}`, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(ApiResponse{Success: true, Message: "account deleted"})
+}
 
 // POST /api/user/subscribe
 func (s *Server) handleSubscribe(w http.ResponseWriter, r *http.Request) {

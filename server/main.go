@@ -258,6 +258,16 @@ func (s *Server) ValidateToken(ctx context.Context, req *pb.ValidateTokenRequest
 	}, nil
 }
 
+func (s *Server) DeleteUser(ctx context.Context, req *pb.DeleteUserRequest) (*pb.DeleteResponse, error) {
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	if err := s.database.DeleteUser(req.UserId); err != nil {
+		return nil, status.Error(codes.Internal, "failed to delete user")
+	}
+	return &pb.DeleteResponse{Success: true, Message: "account deleted"}, nil
+}
+
 func (s *Server) GetUserByTgID(ctx context.Context, req *pb.GetUserByTgIDRequest) (*pb.UserResponse, error) {
 	if req.TgId == "" {
 		return nil, status.Error(codes.InvalidArgument, "tg_id is empty")

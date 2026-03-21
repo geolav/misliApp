@@ -2189,6 +2189,50 @@ func (x *GetFeedRequest) GetPageSize() int32 {
 	return 0
 }
 
+type DeleteUserRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteUserRequest) Reset() {
+	*x = DeleteUserRequest{}
+	mi := &file_proto_user_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteUserRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteUserRequest) ProtoMessage() {}
+
+func (x *DeleteUserRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteUserRequest.ProtoReflect.Descriptor instead.
+func (*DeleteUserRequest) Descriptor() ([]byte, []int) {
+	return file_proto_user_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *DeleteUserRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
 type DeleteResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
@@ -2199,7 +2243,7 @@ type DeleteResponse struct {
 
 func (x *DeleteResponse) Reset() {
 	*x = DeleteResponse{}
-	mi := &file_proto_user_proto_msgTypes[36]
+	mi := &file_proto_user_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2211,7 +2255,7 @@ func (x *DeleteResponse) String() string {
 func (*DeleteResponse) ProtoMessage() {}
 
 func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_user_proto_msgTypes[36]
+	mi := &file_proto_user_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2224,7 +2268,7 @@ func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteResponse.ProtoReflect.Descriptor instead.
 func (*DeleteResponse) Descriptor() ([]byte, []int) {
-	return file_proto_user_proto_rawDescGZIP(), []int{36}
+	return file_proto_user_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *DeleteResponse) GetSuccess() bool {
@@ -2411,10 +2455,12 @@ const file_proto_user_proto_rawDesc = "" +
 	"\x0eGetFeedRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\"D\n" +
+	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\",\n" +
+	"\x11DeleteUserRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"D\n" +
 	"\x0eDeleteResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage2\x86\f\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage2\xc9\f\n" +
 	"\vUserService\x12?\n" +
 	"\n" +
 	"CreateUser\x12\x1a.user.v1.CreateUserRequest\x1a\x15.user.v1.UserResponse\x12C\n" +
@@ -2442,7 +2488,9 @@ const file_proto_user_proto_rawDesc = "" +
 	"\fIsSubscribed\x12\x1c.user.v1.IsSubscribedRequest\x1a\x1d.user.v1.IsSubscribedResponse\x12T\n" +
 	"\x0fLoginOrRegister\x12\x1f.user.v1.LoginOrRegisterRequest\x1a .user.v1.LoginOrRegisterResponse\x12N\n" +
 	"\rValidateToken\x12\x1d.user.v1.ValidateTokenRequest\x1a\x1e.user.v1.ValidateTokenResponse\x12A\n" +
-	"\vGetUserByID\x12\x1b.user.v1.GetUserByIDRequest\x1a\x15.user.v1.UserResponseB\x18Z\x16./proto/user/v1;userv1b\x06proto3"
+	"\vGetUserByID\x12\x1b.user.v1.GetUserByIDRequest\x1a\x15.user.v1.UserResponse\x12A\n" +
+	"\n" +
+	"DeleteUser\x12\x1a.user.v1.DeleteUserRequest\x1a\x17.user.v1.DeleteResponseB\x18Z\x16./proto/user/v1;userv1b\x06proto3"
 
 var (
 	file_proto_user_proto_rawDescOnce sync.Once
@@ -2456,7 +2504,7 @@ func file_proto_user_proto_rawDescGZIP() []byte {
 	return file_proto_user_proto_rawDescData
 }
 
-var file_proto_user_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
+var file_proto_user_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
 var file_proto_user_proto_goTypes = []any{
 	(*LoginOrRegisterRequest)(nil),   // 0: user.v1.LoginOrRegisterRequest
 	(*LoginOrRegisterResponse)(nil),  // 1: user.v1.LoginOrRegisterResponse
@@ -2494,7 +2542,8 @@ var file_proto_user_proto_goTypes = []any{
 	(*UnsubscribeRequest)(nil),       // 33: user.v1.UnsubscribeRequest
 	(*SubscribeResponse)(nil),        // 34: user.v1.SubscribeResponse
 	(*GetFeedRequest)(nil),           // 35: user.v1.GetFeedRequest
-	(*DeleteResponse)(nil),           // 36: user.v1.DeleteResponse
+	(*DeleteUserRequest)(nil),        // 36: user.v1.DeleteUserRequest
+	(*DeleteResponse)(nil),           // 37: user.v1.DeleteResponse
 }
 var file_proto_user_proto_depIdxs = []int32{
 	20, // 0: user.v1.ListUserResponse.user:type_name -> user.v1.UserResponse
@@ -2524,30 +2573,32 @@ var file_proto_user_proto_depIdxs = []int32{
 	0,  // 24: user.v1.UserService.LoginOrRegister:input_type -> user.v1.LoginOrRegisterRequest
 	3,  // 25: user.v1.UserService.ValidateToken:input_type -> user.v1.ValidateTokenRequest
 	2,  // 26: user.v1.UserService.GetUserByID:input_type -> user.v1.GetUserByIDRequest
-	20, // 27: user.v1.UserService.CreateUser:output_type -> user.v1.UserResponse
-	20, // 28: user.v1.UserService.GetUserByUsername:output_type -> user.v1.UserResponse
-	20, // 29: user.v1.UserService.UpdateUser:output_type -> user.v1.UserResponse
-	9,  // 30: user.v1.UserService.ListUsers:output_type -> user.v1.ListUserResponse
-	11, // 31: user.v1.UserService.IsAdmin:output_type -> user.v1.IsAdminResponse
-	13, // 32: user.v1.UserService.AddAdmin:output_type -> user.v1.AddAdminResponse
-	15, // 33: user.v1.UserService.RemoveAdmin:output_type -> user.v1.RemoveAdminResponse
-	20, // 34: user.v1.UserService.GetUserByTgID:output_type -> user.v1.UserResponse
-	20, // 35: user.v1.UserService.RegisterUser:output_type -> user.v1.UserResponse
-	25, // 36: user.v1.UserService.CreatePost:output_type -> user.v1.PostResponse
-	27, // 37: user.v1.UserService.GetPost:output_type -> user.v1.PostWithCommentsResponse
-	26, // 38: user.v1.UserService.GetUserPosts:output_type -> user.v1.PostsResponse
-	36, // 39: user.v1.UserService.DeletePost:output_type -> user.v1.DeleteResponse
-	30, // 40: user.v1.UserService.AddComment:output_type -> user.v1.CommentResponse
-	31, // 41: user.v1.UserService.GetComments:output_type -> user.v1.CommentsResponse
-	34, // 42: user.v1.UserService.Subscribe:output_type -> user.v1.SubscribeResponse
-	34, // 43: user.v1.UserService.Unsubscribe:output_type -> user.v1.SubscribeResponse
-	26, // 44: user.v1.UserService.GetFeed:output_type -> user.v1.PostsResponse
-	7,  // 45: user.v1.UserService.IsSubscribed:output_type -> user.v1.IsSubscribedResponse
-	1,  // 46: user.v1.UserService.LoginOrRegister:output_type -> user.v1.LoginOrRegisterResponse
-	4,  // 47: user.v1.UserService.ValidateToken:output_type -> user.v1.ValidateTokenResponse
-	20, // 48: user.v1.UserService.GetUserByID:output_type -> user.v1.UserResponse
-	27, // [27:49] is the sub-list for method output_type
-	5,  // [5:27] is the sub-list for method input_type
+	36, // 27: user.v1.UserService.DeleteUser:input_type -> user.v1.DeleteUserRequest
+	20, // 28: user.v1.UserService.CreateUser:output_type -> user.v1.UserResponse
+	20, // 29: user.v1.UserService.GetUserByUsername:output_type -> user.v1.UserResponse
+	20, // 30: user.v1.UserService.UpdateUser:output_type -> user.v1.UserResponse
+	9,  // 31: user.v1.UserService.ListUsers:output_type -> user.v1.ListUserResponse
+	11, // 32: user.v1.UserService.IsAdmin:output_type -> user.v1.IsAdminResponse
+	13, // 33: user.v1.UserService.AddAdmin:output_type -> user.v1.AddAdminResponse
+	15, // 34: user.v1.UserService.RemoveAdmin:output_type -> user.v1.RemoveAdminResponse
+	20, // 35: user.v1.UserService.GetUserByTgID:output_type -> user.v1.UserResponse
+	20, // 36: user.v1.UserService.RegisterUser:output_type -> user.v1.UserResponse
+	25, // 37: user.v1.UserService.CreatePost:output_type -> user.v1.PostResponse
+	27, // 38: user.v1.UserService.GetPost:output_type -> user.v1.PostWithCommentsResponse
+	26, // 39: user.v1.UserService.GetUserPosts:output_type -> user.v1.PostsResponse
+	37, // 40: user.v1.UserService.DeletePost:output_type -> user.v1.DeleteResponse
+	30, // 41: user.v1.UserService.AddComment:output_type -> user.v1.CommentResponse
+	31, // 42: user.v1.UserService.GetComments:output_type -> user.v1.CommentsResponse
+	34, // 43: user.v1.UserService.Subscribe:output_type -> user.v1.SubscribeResponse
+	34, // 44: user.v1.UserService.Unsubscribe:output_type -> user.v1.SubscribeResponse
+	26, // 45: user.v1.UserService.GetFeed:output_type -> user.v1.PostsResponse
+	7,  // 46: user.v1.UserService.IsSubscribed:output_type -> user.v1.IsSubscribedResponse
+	1,  // 47: user.v1.UserService.LoginOrRegister:output_type -> user.v1.LoginOrRegisterResponse
+	4,  // 48: user.v1.UserService.ValidateToken:output_type -> user.v1.ValidateTokenResponse
+	20, // 49: user.v1.UserService.GetUserByID:output_type -> user.v1.UserResponse
+	37, // 50: user.v1.UserService.DeleteUser:output_type -> user.v1.DeleteResponse
+	28, // [28:51] is the sub-list for method output_type
+	5,  // [5:28] is the sub-list for method input_type
 	5,  // [5:5] is the sub-list for extension type_name
 	5,  // [5:5] is the sub-list for extension extendee
 	0,  // [0:5] is the sub-list for field type_name
@@ -2564,7 +2615,7 @@ func file_proto_user_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_user_proto_rawDesc), len(file_proto_user_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   37,
+			NumMessages:   38,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
